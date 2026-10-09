@@ -1,0 +1,5 @@
+@if (assessed()) {
+  <span class="priority" [class]="'priority ' + band()" [title]="'Priority score ' + score()">{{ score() }}</span>
+} @else {
+  <span class="priority none" title="Not assessed">N/A</span>
+}

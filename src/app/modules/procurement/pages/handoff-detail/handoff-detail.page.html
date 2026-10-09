@@ -1,0 +1,190 @@
+<app-page-state [loading]="data.loading() && !h()" [error]="h() ? null : data.error()" (retry)="data.reload()" />
+
+@if (h(); as h) {
+  <div class="ticket-head">
+    <h1>{{ h['HandoffNo'] }}</h1>
+    <app-status-chip [value]="h['Status']" />
+    <span class="muted">{{ h['RequestNo'] }} · {{ h['ReportNo'] }}</span>
+    <span style="flex: 1"></span>
+    <button mat-stroked-button (click)="data.reload()" [disabled]="data.loading()"><mat-icon>refresh</mat-icon>Refresh</button>
+  </div>
+
+  <div class="ticket">
+    <div>
+      <section class="card">
+        <h2>Request</h2>
+        <div class="kv">
+          <div><label>Category</label><p>{{ h['EffectiveCategory'] ?? '—' }}</p></div>
+          <div><label>Urgency</label><p><app-status-chip [value]="h['EffectiveUrgency']" /></p></div>
+          <div><label>Required service</label><p>{{ h['RequiredService'] ?? '—' }}</p></div>
+          <div><label>Required capability</label><p>{{ h['RequiredCapability'] ?? '—' }}</p></div>
+          <div style="grid-column: 1 / -1"><label>Scope of work</label><p>{{ h['ScopeOfWork'] ?? '—' }}</p></div>
+          <div style="grid-column: 1 / -1"><label>Safety requirements</label><p>{{ h['SafetyRequirements'] ?? '—' }}</p></div>
+          @if (h['Notes']) {
+            <div style="grid-column: 1 / -1"><label>Notes</label><p>{{ h['Notes'] }}</p></div>
+          }
+        </div>
+      </section>
+
+      <section class="card">
+        <header>
+          <h2>Clarifications</h2>
+          @if (isActor() && open()) {
+            <button mat-stroked-button (click)="askClarification()" [disabled]="busy()"><mat-icon>help_outline</mat-icon>Ask question</button>
+          }
+        </header>
+        @for (c of data.value()!.clarifications; track c['Id']) {
+          <div class="qa">
+            <div style="display: flex; justify-content: space-between; gap: 8px">
+              <span class="muted">{{ c['AskedByName'] }} · {{ c['AskedAt'] | date: 'MMM d, h:mm a' }}</span>
+              <app-status-chip [value]="c['Status']" />
+            </div>
+            <p><strong>Q:</strong> {{ c['Question'] }}</p>
+            @if (c['Response']) {
+              <p><strong>A:</strong> {{ c['Response'] }}</p>
+              <span class="muted">Answered {{ c['AnsweredAt'] | date: 'MMM d, h:mm a' }}</span>
+            } @else if (c['Status'] === 'OPEN' && isSupervisor()) {
+              @if (c['AiResponseDraft']) {
+                <div class="advisory"><mat-icon>smart_toy</mat-icon><div><strong>AI draft (advisory)</strong><p>{{ c['AiResponseDraft'] }}</p></div></div>
+              }
+              <button mat-flat-button (click)="respond(c)" [disabled]="busy()">Respond</button>
+            }
+          </div>
+        } @empty {
+          <p class="muted">No clarifications.</p>
+        }
+      </section>
+
+      <section class="card">
+        <h2>Documents</h2>
+        @for (d of data.value()!.documents; track d['Id']) {
+          <div class="doc">
+            <mat-icon>description</mat-icon>
+            <a [href]="d['SecureUrl']" target="_blank" rel="noopener">{{ d['FileName'] ?? 'Document' }}</a>
+            <span class="muted">{{ d['DocumentType'] | humanize }} · {{ d['CreatedAt'] | date: 'MMM d' }}</span>
+          </div>
+        } @empty {
+          <p class="muted">No documents.</p>
+        }
+        @if (isActor()) {
+          <form [formGroup]="docForm" (ngSubmit)="upload(picker)" class="form-grid" style="margin-top: 12px">
+            <input #picker type="file" hidden (change)="pickFile(picker)" />
+            <div class="span-all">
+              <button mat-stroked-button type="button" (click)="picker.click()"><mat-icon>attach_file</mat-icon>Choose file</button>
+              <span class="muted"> {{ file()?.name ?? 'No file chosen (max 10 MB)' }}</span>
+            </div>
+            <mat-form-field>
+              <mat-label>Document type</mat-label>
+              <mat-select formControlName="documentType">
+                @for (t of documentTypes; track t) {
+                  <mat-option [value]="t">{{ t | humanize }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field>
+              <mat-label>For clarification (optional)</mat-label>
+              <mat-select formControlName="clarificationId">
+                <mat-option value="">None</mat-option>
+                @for (c of data.value()!.clarifications; track c['Id']) {
+                  <mat-option [value]="c['Id']">{{ c['Question'] }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <div class="span-all"><button mat-stroked-button type="submit" [disabled]="busy() || !file()">Upload</button></div>
+          </form>
+        }
+      </section>
+
+      @if (data.value()!.outcome; as o) {
+        <section class="card">
+          <h2>Outcome</h2>
+          <div class="kv">
+            <div><label>Execution type</label><p>{{ o['ExecutionType'] | humanize }}</p></div>
+            <div><label>Assigned party</label><p>{{ o['AssignedPartyName'] }}</p></div>
+            <div><label>Responsible lead</label><p>{{ o['ResponsibleLeadName'] ?? '—' }}</p></div>
+            <div><label>Reference no.</label><p>{{ o['ProcurementReferenceNo'] ?? '—' }}</p></div>
+            <div><label>Planned start</label><p>{{ (o['PlannedStartAt'] | date: 'MMM d, y') ?? '—' }}</p></div>
+            <div><label>Deadline</label><p>{{ (o['PlannedDeadlineAt'] | date: 'MMM d, y') ?? '—' }}</p></div>
+            <div style="grid-column: 1 / -1"><label>Notes</label><p>{{ o['Notes'] ?? '—' }}</p></div>
+          </div>
+        </section>
+      } @else if (isActor() && open()) {
+        <mat-accordion>
+          <mat-expansion-panel>
+            <mat-expansion-panel-header><mat-panel-title>Record external process outcome</mat-panel-title></mat-expansion-panel-header>
+            @if (openClarifications()) {
+              <p class="muted">{{ openClarifications() }} open clarification(s) must be answered first.</p>
+            }
+            <form [formGroup]="outcomeForm" (ngSubmit)="recordOutcome()" class="form-grid">
+              <mat-form-field>
+                <mat-label>Execution type</mat-label>
+                <mat-select formControlName="executionType">
+                  @for (t of executionTypes; track t) {
+                    <mat-option [value]="t">{{ t | humanize }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field><mat-label>Assigned party</mat-label><input matInput formControlName="assignedPartyName" /></mat-form-field>
+              <mat-form-field><mat-label>Responsible lead name</mat-label><input matInput formControlName="responsibleLeadName" /></mat-form-field>
+              <mat-form-field><mat-label>Lead contact</mat-label><input matInput formControlName="responsibleLeadContact" /></mat-form-field>
+              <mat-form-field><mat-label>Lead email</mat-label><input matInput formControlName="responsibleLeadEmail" /></mat-form-field>
+              <mat-form-field><mat-label>Procurement reference no.</mat-label><input matInput formControlName="procurementReferenceNo" /></mat-form-field>
+              <mat-form-field><mat-label>Planned start</mat-label><input matInput type="date" formControlName="plannedStartAt" /></mat-form-field>
+              <mat-form-field><mat-label>Planned deadline</mat-label><input matInput type="date" formControlName="plannedDeadlineAt" /></mat-form-field>
+              <mat-form-field><mat-label>Agreed duration (days)</mat-label><input matInput type="number" formControlName="agreedDurationDays" /></mat-form-field>
+              <mat-form-field><mat-label>Planned crew size</mat-label><input matInput type="number" formControlName="plannedCrewSize" /></mat-form-field>
+              <mat-form-field>
+                <mat-label>Reference document</mat-label>
+                <mat-select formControlName="referenceDocumentId">
+                  <mat-option value="">None</mat-option>
+                  @for (d of data.value()!.documents; track d['Id']) {
+                    <mat-option [value]="d['Id']">{{ d['FileName'] ?? d['DocumentType'] }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field class="span-all"><mat-label>Notes</mat-label><textarea matInput rows="2" formControlName="notes"></textarea></mat-form-field>
+              <div class="span-all"><button mat-flat-button type="submit" [disabled]="busy() || openClarifications() > 0">Record outcome</button></div>
+            </form>
+          </mat-expansion-panel>
+        </mat-accordion>
+      }
+    </div>
+
+    <aside class="card props">
+      <h2>Properties</h2>
+      <dl>
+        <dt>Status</dt><dd><app-status-chip [value]="h['Status']" /></dd>
+        <dt>Submitted</dt><dd>{{ h['SubmittedAt'] | date: 'MMM d, y, h:mm a' }}</dd>
+        <dt>Acknowledged</dt><dd>{{ (h['AcknowledgedAt'] | date: 'MMM d, h:mm a') ?? '—' }}</dd>
+        <dt>Expected reply</dt><dd>{{ (h['ExpectedResponseAt'] | date: 'MMM d') ?? '—' }}</dd>
+        <dt>Next follow-up</dt><dd>{{ (h['NextFollowUpAt'] | date: 'MMM d') ?? '—' }}</dd>
+        <dt>External ref.</dt>
+        <dd>
+          @if (h['ExternalSystemUrl']) {
+            <a [href]="h['ExternalSystemUrl']" target="_blank" rel="noopener">{{ h['ExternalSystemReference'] ?? 'Open' }}</a>
+          } @else {
+            {{ h['ExternalSystemReference'] ?? '—' }}
+          }
+        </dd>
+        <dt>Review decision</dt><dd>{{ h['MaintenanceReviewDecision'] | humanize }}</dd>
+        <dt>Report</dt><dd><a [routerLink]="['/reports', h['ReportId']]">{{ h['ReportNo'] }}</a></dd>
+      </dl>
+      @if (isActor() && open()) {
+        <div class="props-actions">
+          @if (status() === 'SUBMITTED') {
+            <button mat-flat-button (click)="acknowledge()" [disabled]="busy()"><mat-icon>done</mat-icon>Acknowledge</button>
+          }
+          @if (['SUBMITTED', 'ACKNOWLEDGED', 'IN_PROCESS'].includes(status() ?? '')) {
+            <form [formGroup]="startForm" (ngSubmit)="start()">
+              <mat-form-field class="full" subscriptSizing="dynamic"><mat-label>External system ref.</mat-label><input matInput formControlName="externalSystemReference" /></mat-form-field>
+              <mat-form-field class="full"><mat-label>External system URL</mat-label><input matInput formControlName="externalSystemUrl" /></mat-form-field>
+              <button mat-stroked-button class="full" type="submit" [disabled]="busy()">
+                {{ status() === 'IN_PROCESS' ? 'Update external reference' : 'Start processing' }}
+              </button>
+            </form>
+          }
+        </div>
+      }
+    </aside>
+  </div>
+}

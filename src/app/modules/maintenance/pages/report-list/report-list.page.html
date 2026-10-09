@@ -1,0 +1,67 @@
+<div class="page-head">
+  <div>
+    <h1>Reports</h1>
+    <p>All reports (latest 200), ordered by live priority.</p>
+  </div>
+  <div class="actions">
+    <button mat-stroked-button (click)="data.reload()"><mat-icon>refresh</mat-icon>Refresh</button>
+  </div>
+</div>
+
+<div class="toolbar-row">
+  <mat-button-toggle-group [value]="triage()" (change)="triage.set($event.value)" hideSingleSelectionIndicator aria-label="Triage">
+    <mat-button-toggle value="all">All</mat-button-toggle>
+    <mat-button-toggle value="actionable">Actionable</mat-button-toggle>
+    <mat-button-toggle value="screening">Screening</mat-button-toggle>
+  </mat-button-toggle-group>
+  <mat-form-field subscriptSizing="dynamic">
+    <mat-label>Status</mat-label>
+    <mat-select [ngModel]="status()" (ngModelChange)="status.set($event)">
+      <mat-option [value]="null">Any status</mat-option>
+      @for (s of statuses; track s) {
+        <mat-option [value]="s">{{ s | humanize }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+  <mat-form-field subscriptSizing="dynamic">
+    <mat-label>Search</mat-label>
+    <input matInput [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Report no., category, building" />
+    <mat-icon matSuffix>search</mat-icon>
+  </mat-form-field>
+</div>
+
+<div class="table-wrap">
+  <app-page-state [loading]="data.loading()" [error]="data.error()" [empty]="rows().length ? null : 'No reports match'" (retry)="data.reload()" />
+  @if (!data.loading() && rows().length) {
+    <table mat-table [dataSource]="rows()">
+      <ng-container matColumnDef="priority">
+        <th mat-header-cell *matHeaderCellDef>Priority</th>
+        <td mat-cell *matCellDef="let r"><app-priority-badge [score]="r.priorityScore" /></td>
+      </ng-container>
+      <ng-container matColumnDef="report">
+        <th mat-header-cell *matHeaderCellDef>Report</th>
+        <td mat-cell *matCellDef="let r"><span class="ref">{{ r.reportNo }}</span><span class="sub">{{ r.screening.title }}</span></td>
+      </ng-container>
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let r"><app-status-chip [value]="r.status" /><span class="sub">Agent: {{ r.agentStatus | humanize }}</span></td>
+      </ng-container>
+      <ng-container matColumnDef="category">
+        <th mat-header-cell *matHeaderCellDef>Category / urgency</th>
+        <td mat-cell *matCellDef="let r">{{ r.effectiveCategory ?? '—' }}<span class="sub">{{ r.effectiveUrgency ?? '' }}</span></td>
+      </ng-container>
+      <ng-container matColumnDef="location">
+        <th mat-header-cell *matHeaderCellDef>Location</th>
+        <td mat-cell *matCellDef="let r">
+          {{ r.building ?? '—' }}<span class="sub">{{ r.floor }}{{ r.floor && r.roomOrArea ? ' · ' : '' }}{{ r.roomOrArea }}</span>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="created">
+        <th mat-header-cell *matHeaderCellDef>Submitted</th>
+        <td mat-cell *matCellDef="let r">{{ r.createdAt | date: 'MMM d, y' }}</td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let r; columns: columns" (click)="open(r)"></tr>
+    </table>
+  }
+</div>

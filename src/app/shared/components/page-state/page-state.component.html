@@ -1,0 +1,14 @@
+@if (loading()) {
+  <div class="state"><mat-spinner diameter="36" /></div>
+} @else if (error()) {
+  <div class="state" role="alert">
+    <mat-icon class="state-icon error">error_outline</mat-icon>
+    <p>{{ error() }}</p>
+    <button mat-stroked-button (click)="retry.emit()">Retry</button>
+  </div>
+} @else if (empty()) {
+  <div class="state">
+    <mat-icon class="state-icon">{{ icon() }}</mat-icon>
+    <p>{{ empty() }}</p>
+  </div>
+}

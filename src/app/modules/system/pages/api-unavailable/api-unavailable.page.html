@@ -1,0 +1,7 @@
+<div class="card notice">
+  <mat-icon class="icon error">cloud_off</mat-icon>
+  <h2>Can't reach SEEFIX</h2>
+  <p>The API is unreachable. Check your connection or try again shortly.</p>
+  <button mat-flat-button (click)="retry()" [disabled]="busy()">Retry</button>
+  <button mat-button (click)="session.end()">Sign out</button>
+</div>

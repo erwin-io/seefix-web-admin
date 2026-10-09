@@ -1,0 +1,57 @@
+<div class="page-head">
+  <div>
+    <h1>Welcome back, {{ firstName() }}</h1>
+    <p>Here's what needs attention today.</p>
+  </div>
+  <div class="actions"><button mat-stroked-button (click)="refresh()"><mat-icon>refresh</mat-icon>Refresh</button></div>
+</div>
+
+<section class="metrics">
+  @for (m of metrics(); track m.label) {
+    <a class="metric" [routerLink]="m.link" [queryParams]="m.query">
+      <mat-icon>{{ m.icon }}</mat-icon>
+      <div>
+        <strong>{{ m.value ?? '—' }}</strong>
+        <span>{{ m.label }}</span>
+      </div>
+    </a>
+  }
+</section>
+
+@if (actions().length) {
+  <section class="card attention">
+    <header>
+      <h2>Needs attention</h2>
+      <a mat-button routerLink="/maintenance/action-center">Open Action Center</a>
+    </header>
+    @for (a of actions(); track a.EntityId + a.ActionType) {
+      <a [routerLink]="link(a)">
+        <app-priority-badge [score]="a.PriorityScore" />
+        <div class="grow">
+          <strong>{{ a.ReferenceNo ?? (a.EntityType | humanize) }}</strong> · {{ a.ActionType | humanize }}
+          <small>{{ a.Summary }}</small>
+        </div>
+        <small>{{ a.ActionCreatedAt | date: 'MMM d, h:mm a' }}</small>
+      </a>
+    }
+  </section>
+}
+
+@if (myWork().length) {
+  <section class="card attention">
+    <header>
+      <h2>My active work orders</h2>
+      <a mat-button routerLink="/work-orders">View all</a>
+    </header>
+    @for (w of myWork(); track w.id) {
+      <a [routerLink]="['/work-orders', w.id]">
+        <app-status-chip [value]="w.status" />
+        <div class="grow">
+          <strong>{{ w.workOrderNo }}</strong> · {{ w.reportNo }}
+          <small>{{ w.assignedPartyName }}</small>
+        </div>
+        <small>{{ w.deadline ? 'Due ' + (w.deadline | date: 'MMM d') : '' }}</small>
+      </a>
+    }
+  </section>
+}

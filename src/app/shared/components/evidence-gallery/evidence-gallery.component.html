@@ -1,0 +1,9 @@
+@if (urls().length) {
+  <div class="gallery">
+    @for (src of urls(); track src) {
+      <a [href]="src" target="_blank" rel="noopener" class="thumb"><img [src]="src" alt="Evidence photo" loading="lazy" /></a>
+    }
+  </div>
+} @else {
+  <p class="muted"><mat-icon inline>image_not_supported</mat-icon> No photos</p>
+}

@@ -1,0 +1,61 @@
+<div class="page-head">
+  <div>
+    <h1>Users</h1>
+    <p>{{ data.value()?.items?.length ?? 0 }} accounts. Editing and deactivation need backend support (not available yet).</p>
+  </div>
+  <div class="actions">
+    <button mat-stroked-button (click)="data.reload()"><mat-icon>refresh</mat-icon>Refresh</button>
+    <button mat-flat-button (click)="create()"><mat-icon>person_add</mat-icon>Create user</button>
+  </div>
+</div>
+
+<div class="toolbar-row">
+  <mat-form-field subscriptSizing="dynamic">
+    <mat-label>Role</mat-label>
+    <mat-select [ngModel]="role()" (ngModelChange)="role.set($event)">
+      <mat-option [value]="null">All roles</mat-option>
+      @for (r of roles; track r) {
+        <mat-option [value]="r">{{ label[r] }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+  <mat-form-field subscriptSizing="dynamic">
+    <mat-label>Search</mat-label>
+    <input matInput [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Name, email, username" />
+    <mat-icon matSuffix>search</mat-icon>
+  </mat-form-field>
+</div>
+
+<div class="table-wrap">
+  <app-page-state [loading]="data.loading()" [error]="data.error()" [empty]="rows().length ? null : 'No users match'" (retry)="data.reload()" icon="group" />
+  @if (!data.loading() && rows().length) {
+    <table mat-table [dataSource]="rows()">
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef>Name</th>
+        <td mat-cell *matCellDef="let u">{{ u.fullName }}<span class="sub">{{ u.email }}{{ u.username ? ' · @' + u.username : '' }}</span></td>
+      </ng-container>
+      <ng-container matColumnDef="role">
+        <th mat-header-cell *matHeaderCellDef>Role</th>
+        <td mat-cell *matCellDef="let u">
+          {{ roleName(u.role) }}<span class="sub">{{ u.jobTitle }}{{ u.departmentOrTrade ? ' · ' + u.departmentOrTrade : '' }}</span>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="active">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let u">
+          <app-status-chip [value]="u.isActive ? 'ACTIVE' : 'INACTIVE'" />
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="login">
+        <th mat-header-cell *matHeaderCellDef>Last sign-in</th>
+        <td mat-cell *matCellDef="let u">{{ (u.lastLoginAt | date: 'MMM d, y') ?? 'Never' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="created">
+        <th mat-header-cell *matHeaderCellDef>Created</th>
+        <td mat-cell *matCellDef="let u">{{ u.createdAt | date: 'MMM d, y' }}</td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let u; columns: columns" class="static"></tr>
+    </table>
+  }
+</div>

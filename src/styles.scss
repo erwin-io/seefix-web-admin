@@ -1,19 +1,7 @@
-:root{font-family:Arial,sans-serif;color:#233a48;background:#f4f7f9}
-*{box-sizing:border-box}body{margin:0}button,input{font:inherit}button{cursor:pointer}
-a{text-decoration:none;color:inherit}h1{letter-spacing:-.04em}
-button{border:0;background:#078b85;color:white;padding:12px 19px;border-radius:9px;font-weight:700}
-input{padding:12px;border:1px solid #cbd7df;border-radius:9px;width:100%}
-label{display:block;font-size:13px;font-weight:700;margin-bottom:7px}
-.shell{display:flex;min-height:100vh}.side{width:245px;background:#163348;padding:24px;color:#dce6ed}
-.brand{font-size:25px;font-weight:800;margin-bottom:40px}.brand span{color:#2fd9c3}
-.side nav{display:flex;flex-direction:column;gap:8px}.side nav a{padding:12px;border-radius:8px;font-size:13px}
-.side nav a:hover,.side nav a.active{background:#31576c}
-.main{flex:1;min-width:0}.top{background:#fff;border-bottom:1px solid #e1e8ef;padding:19px 29px;display:flex;justify-content:space-between;align-items:center}
-.content{padding:30px;max-width:1500px;margin:auto}.muted{color:#728696;font-size:13px}
-.card{background:#fff;padding:24px;border:1px solid #e4ebf0;border-radius:14px;box-shadow:0 5px 24px #18374809}
-.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:18px}.metrics strong{display:block;font-size:42px;color:#078b85;margin:18px 0}
-.alert{padding:13px;background:#fff0f0;color:#a12424;border-radius:8px;margin:15px 0}
-.login{display:grid;grid-template-columns:1fr 1fr;min-height:100vh}.login-left{background:#143047;color:white;padding:65px;display:flex;justify-content:center;flex-direction:column}
-.login-left h1{font-size:52px;line-height:1.13}.login-left p{color:#b4cad8;line-height:1.7}
-.login-right{display:grid;place-items:center;padding:25px}.form{width:min(420px,100%)}.field{margin:20px 0}.form button{width:100%}
-@media(max-width:760px){.side{width:160px;padding:13px}.content{padding:16px}.top{padding:12px}.login{grid-template-columns:1fr}.login-left{padding:28px}.login-left h1{font-size:30px}}
+// Global styles only: theme tokens and layout classes shared across modules.
+// Component-specific styles live next to each component (.component.scss / .page.scss).
+@use 'styles/theme';
+@use 'styles/layout';
+@use 'styles/ticket';
+@use 'styles/utilities';
+@use 'styles/overlays';

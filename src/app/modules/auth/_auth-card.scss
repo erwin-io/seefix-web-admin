@@ -1,0 +1,87 @@
+// Shared look for the public auth pages; each page's .scss @use-s this partial.
+:host {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 16px;
+  background: linear-gradient(135deg, #14213a 0%, #1e3a8a 100%);
+}
+
+.auth {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+}
+
+mat-progress-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+
+  span {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--sf-accent);
+    color: #fff;
+    font-weight: 700;
+  }
+}
+
+h1 {
+  margin: 0 0 4px;
+  font-size: 22px;
+}
+
+.lead {
+  margin: 0 0 20px;
+  color: var(--sf-muted);
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+}
+
+.msg {
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 13px;
+
+  &.error {
+    background: #fdecec;
+    color: var(--sf-danger);
+  }
+
+  &.info {
+    background: var(--sf-accent-soft);
+    color: var(--sf-info);
+  }
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+button[type='submit'] {
+  height: 44px;
+}

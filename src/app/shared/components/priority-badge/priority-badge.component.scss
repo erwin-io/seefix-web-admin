@@ -1,0 +1,16 @@
+.priority {
+  display: inline-grid;
+  place-items: center;
+  min-width: 36px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 12px;
+
+  &.none { background: #eef1f5; color: var(--sf-muted); }
+  &.p-low { background: #e7f6ec; color: var(--sf-ok); }
+  &.p-medium { background: #e8efff; color: var(--sf-info); }
+  &.p-high { background: #fff4e0; color: var(--sf-warn); }
+  &.p-critical { background: #fdecec; color: var(--sf-danger); }
+}
