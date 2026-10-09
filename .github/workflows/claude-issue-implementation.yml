@@ -43,7 +43,8 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          track_progress: true
+          # Tracking is only supported for issues events, not issue_comment.
+          track_progress: ${{ github.event_name == 'issues' }}
           prompt: |
             You are the dedicated SEEFIX Angular Web Admin developer.
             Repository: ${{ github.repository }}
