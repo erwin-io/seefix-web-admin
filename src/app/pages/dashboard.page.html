@@ -1,0 +1,7 @@
+<section class="header"><div><p class="muted">OPERATIONS OVERVIEW</p><h1>Welcome, {{auth.session.user()?.fullName}}</h1><p class="muted">Your authorized SEEFIX operational queues.</p></div><button type="button" (click)="refresh()">Refresh ↻</button></section>
+<div class="notice"><strong>Human-controlled maintenance:</strong> AI scores and drafts are advisory. Decisions, dispatch and final completion require authorized people.</div>
+<div class="card" *ngIf="loading()">Loading live operational data…</div>
+<p class="alert error" *ngIf="error()" role="alert">{{error()}}</p>
+<div class="metrics" *ngIf="!loading()&&!error()"><a class="card tile" *ngFor="let metric of metrics()" [routerLink]="metric.path">
+<span>{{metric.title}}</span><strong>{{metric.count}}</strong><p>{{metric.subtitle}}</p><span style="color:#078b85;font-size:13px">Open queue →</span></a></div>
+<p class="muted">Counts represent records returned by the API, not fabricated analytics.</p>
