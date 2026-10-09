@@ -1,0 +1,60 @@
+name: Claude Code issue implementation
+
+# Opt-in: only a maintainer's issue label or explicit @claude issue comment.
+# Requires repository secret ANTHROPIC_API_KEY. Merely installing Claude GitHub
+# App does not add a GitHub Actions API key.
+on:
+  issues:
+    types: [labeled]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  actions: read
+  id-token: write
+
+concurrency:
+  group: claude-issue-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  implement:
+    if: >-
+      (github.event_name == 'issues' &&
+       github.event.label.name == 'claude-build' &&
+       github.event.issue.state == 'open' &&
+       !github.event.issue.pull_request) ||
+      (github.event_name == 'issue_comment' &&
+       !github.event.issue.pull_request &&
+       github.event.comment.user.login == 'erwin-io' &&
+       startsWith(github.event.comment.body, '@claude'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Claude Code — implement issue
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          track_progress: true
+          prompt: |
+            You are the dedicated SEEFIX Angular Web Admin developer.
+            Repository: ${{ github.repository }}
+            GitHub issue number: ${{ github.event.issue.number }}
+            Read the issue and relevant repo documentation/source.
+            Preserve the existing Angular 21 / TypeScript / SCSS architecture
+            and current Node API contract. Never edit other SEEFIX repos here.
+            Implement the requested issue in a new feature branch; add tests,
+            run npm ci, npm run lint, npm run typecheck, npm run test:ci and
+            npm run build, and publish changes as a reviewable PR if supported.
+            Include a full change summary, test output, and blockers.
+            Do not merge, bypass branch protection, push directly to main,
+            expose tokens, close the parent MVP epic, or change data/permissions
+            without an approved separate review.
