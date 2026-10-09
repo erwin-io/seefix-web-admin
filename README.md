@@ -1,30 +1,81 @@
-# SEEFIX Web Admin — Angular MVP Foundation
+# SEEFIX Web Admin
 
-The browser application for **ADMIN, MAINTENANCE_STAFF, MAINTENANCE_SUPERVISOR, PROCUREMENT, WORKER**, backed by the existing Node/Express \`seefix-api\`. Reporter accounts belong to the separate Ionic mobile app.
+Internal web app for SEEFIX staff: **Admin, Maintenance Staff, Maintenance Supervisor, Procurement and Worker**.
+Reporters are refused and use the mobile app.
 
-**Development state:** Phase 1 starter, not a complete MVP. The [full delegated Web Admin implementation ticket](https://github.com/erwin-io/seefix-web-admin/issues/1) contains scope, workflow requirements, missing screens, tests and acceptance criteria. Do not represent the read-only queues as a completed business workflow.
+Angular 21 (standalone, zoneless, signals) · Angular Material 21 · SCSS · pusher-js. It talks only to `seefix-api`:
+no Agent, database or Cloudinary secrets in the browser.
 
-## Run locally (Windows PowerShell)
+## Run locally (Windows)
 
-1. Install an Angular-21-compatible Node.js release and ensure the existing SEEFIX API is listening at \`127.0.0.1:3000\`.
-2. In \`C:\\Development\\seefixmanagement\\seefix-web-admin\` run:
+Prerequisites: Node 22.12+ (tested on 22.17.1), a running `seefix-api` on `http://127.0.0.1:3000`
+(with PostgreSQL and the Agent as described in the API README).
 
-    npm install
-    npm start
+```powershell
+cd C:\Development\seefixmanagement\seefix-web-admin
+npm ci
+npm start            # http://localhost:4200, /api and /health proxied to 127.0.0.1:3000 (proxy.conf.json)
+```
 
-3. Open http://127.0.0.1:4200. The development proxy forwards \`/api\` requests to port 3000.
-4. \`npm run build\` and \`npm run typecheck\` are the initial validation commands; no build has been independently run in this cloud session.
+Sign in with any staff account (email **or** username). No CORS setup is needed in dev because of the proxy.
 
-## Implemented foundation
+### Quality gates
 
-- Angular 21 standalone/bootstrap, zoneless change detection, SCSS, dev proxy.
-- Staff sign-in, JWT-backed session, \`/auth/me\` restoration, logout and auth interceptor.
-- Five-role navigation and route guards. Reporters are denied the web-admin.
-- Live role-specific dashboard cards sourced from actual Node API list endpoints.
-- Read-only action center, review queue, reports, Work Orders, Procurement inbox, Admin users and notifications.
+```powershell
+npm run build        # production build
+npm run lint
+npm run typecheck
+npm run test:ci      # Vitest via @angular/build:unit-test
+```
 
-## Remaining implementation
+> If `ng` does not return to the prompt after finishing on your machine, `.\build.ps1 build|lint|"test --watch=false"`
+> runs the same command and stops it once the result is printed.
 
-Complete Maintenance Review approvals, maintenance request detail, Work Order assignment/execution/closeout, Procurement outcome/clarifications/documents, Admin Knowledge, user creation, notifications actions, OTP/account flows, pagination, validation and tests per issue #1. Implement private Pusher channels only after Node provides authenticated channel access and a functioning transactional outbox dispatcher.
+## Configuration
 
-No direct Agent/database calls in frontend. AI is advisory; human-authorized decisions remain the system of record.
+| File | Purpose |
+|---|---|
+| `src/environments/environment.development.ts` | `apiBaseUrl: ''` (same origin, proxied) |
+| `src/environments/environment.ts` | production: set `apiBaseUrl` to the approved **HTTPS** API origin |
+| `proxy.conf.json` | dev proxy target |
+
+For a production deploy on another origin, add that origin to the API's `CORS_ORIGINS`.
+
+### Realtime (Pusher)
+
+The API exposes `GET /api/realtime/config` (public key + cluster only) and `POST /api/realtime/auth`
+(signs **only** the caller's `private-user-{id}` channel). The API publishes `notification.created` after the
+database transaction commits. The client treats the event as "refetch the inbox"; the API list stays the source of truth.
+If Pusher is not configured (`PUSHER_*` empty in the API `.env`) or the connection fails, the app polls every 60 s.
+
+## What each role can do
+
+| Area | Routes | Roles |
+|---|---|---|
+| Dashboard (counts from real list endpoints) | `/dashboard` | all staff |
+| Action Center, Review Queue, Reports | `/maintenance/*` | Staff, Supervisor, Admin |
+| Report detail + **human review decision** (INTERNAL / PROCUREMENT / NO_ACTION / DUPLICATE) | `/reports/:id` | Staff, Supervisor, Admin decide; Procurement/Worker read when linked |
+| Work orders: dispatch, start, status, progress, crew, materials, **completion photos** | `/work-orders` | Staff, Supervisor, Admin, Worker (own only) |
+| Accept completion / request rework | work order detail | Supervisor, Admin |
+| Procurement inbox, acknowledge, start, clarifications, documents, outcome | `/procurement/*` | Procurement, Admin (Maintenance read-only) |
+| Answer procurement clarifications | handoff detail | Supervisor, Admin |
+| Users (list, create), AI knowledge (categories, skills, materials) | `/admin/*` | Admin |
+| Notifications, account settings | `/notifications`, `/account` | all staff |
+
+Client guards only hide what a role can't use. **Server RBAC is authoritative**, and every mutation re-reads
+the record afterwards, so a 409 shows the server's current state.
+
+## Backend changes this app depends on (`seefix-api` branch `feat/web-admin-support`)
+
+- `GET /api/work-orders/assignable-users`: staff pick a responsible lead (`/api/admin/users` is Admin-only).
+- `GET /api/reference/categories`: active categories for review overrides.
+- `GET /api/realtime/config`, `POST /api/realtime/auth` and the after-commit `notification.created` publish.
+- Procurement handoff detail now returns `ReportId`.
+
+## Known gaps (backend tickets)
+
+1. No user edit / deactivate / admin password reset endpoints: the Users page is list + create only.
+2. No server pagination or search on staff lists (API caps at 200 rows); search is client-side.
+3. Realtime only signals notifications; list/detail pages refresh on demand.
+4. No Buildings/Locations admin endpoints.
+5. Live end-to-end runs against real staff accounts, Cloudinary and the Agent are still pending; unit tests use HTTP mocks.

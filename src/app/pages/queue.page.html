@@ -1,6 +1,0 @@
-<section class="header"><div><p class="muted">CURRENT WORKFLOW</p><h1>{{config.label}}</h1><p class="muted">Live role-scoped records returned by the Node API.</p></div><button type="button" (click)="refresh()">Refresh ↻</button></section>
-<div class="card" *ngIf="loading()">Loading queue…</div><p class="alert error" *ngIf="error()" role="alert">{{error()}}</p>
-<div class="card" *ngIf="!loading()&&!error()"><p class="muted">{{items().length}} records</p><div class="table-wrap">
-<table><thead><tr><th *ngFor="let col of config.columns">{{col}}</th></tr></thead><tbody><tr *ngFor="let row of items()"><td *ngFor="let col of config.columns">{{value(row,col)}}</td></tr></tbody></table>
-</div><p class="muted" *ngIf="!items().length">No records returned for this role.</p></div>
-<p class="muted">This first delivery is read-only; authorization and mutating human workflows are tracked in the Web Admin MVP issue.</p>

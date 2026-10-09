@@ -1,0 +1,151 @@
+.shell {
+  height: 100vh;
+}
+
+.sidebar {
+  width: 248px;
+  background: var(--sf-nav-bg);
+  color: var(--sf-nav-fg);
+  border-right: 0;
+
+  --mat-list-list-item-label-text-color: var(--sf-nav-fg);
+  --mat-list-list-item-leading-icon-color: var(--sf-nav-fg-muted);
+  --mat-list-list-item-hover-label-text-color: #fff;
+  --mat-list-list-item-hover-leading-icon-color: #fff;
+  --mat-list-list-item-one-line-container-height: 44px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 20px 16px;
+
+  strong {
+    display: block;
+    color: #fff;
+    letter-spacing: 0.08em;
+  }
+
+  small {
+    color: var(--sf-nav-fg-muted);
+  }
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--sf-accent);
+  color: #fff;
+  font-weight: 700;
+}
+
+.sidebar a.active {
+  background: var(--sf-nav-active);
+  --mat-list-list-item-label-text-color: #fff;
+  --mat-list-list-item-leading-icon-color: #fff;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 8px;
+    bottom: 8px;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: var(--sf-accent);
+  }
+}
+
+mat-nav-list a {
+  margin: 2px 8px;
+  border-radius: 8px;
+  width: auto;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  gap: 8px;
+  height: 60px;
+  background: var(--sf-surface);
+  border-bottom: 1px solid var(--sf-border);
+}
+
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 14px;
+  color: var(--sf-muted);
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+
+  .current {
+    color: var(--sf-text);
+    font-weight: 600;
+  }
+
+  .sep {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.spacer {
+  flex: 1;
+}
+
+.me {
+  height: 44px;
+}
+
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--sf-accent-soft);
+  color: var(--sf-accent);
+  font-size: 13px;
+  font-weight: 700;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.me-text {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+  vertical-align: middle;
+  font-size: 13px;
+
+  small {
+    color: var(--sf-muted);
+    font-size: 11px;
+  }
+}
+
+.content {
+  padding: 24px;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+@media (max-width: 960px) {
+  .me-text {
+    display: none;
+  }
+
+  .content {
+    padding: 16px;
+  }
+}

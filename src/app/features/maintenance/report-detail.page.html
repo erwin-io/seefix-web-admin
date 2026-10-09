@@ -1,0 +1,218 @@
+<app-state [loading]="data.loading() && !r()" [error]="r() ? null : data.error()" (retry)="data.reload()" />
+
+@if (r(); as r) {
+  <div class="ticket-head">
+    <h1>{{ r['ReportNo'] }}</h1>
+    <app-chip [value]="r['Status']" />
+    <app-priority [score]="r['LivePriorityScore']" />
+    <span class="muted">Agent: {{ r['AgentStatus'] | humanize }}</span>
+    <span class="spacer" style="flex: 1"></span>
+    <button mat-stroked-button (click)="data.reload()" [disabled]="data.loading()"><mat-icon>refresh</mat-icon>Refresh</button>
+  </div>
+
+  <div class="ticket">
+    <div>
+      <section class="card">
+        <h2>Reported issue</h2>
+        <p style="white-space: pre-line; margin-top: 0">{{ r['Description'] || 'No description provided.' }}</p>
+        @if (r['Notes']) {
+          <p class="muted" style="white-space: pre-line">Notes: {{ r['Notes'] }}</p>
+        }
+        <app-gallery [urls]="photos()" />
+      </section>
+
+      <section class="card">
+        <h2>AI assessment</h2>
+        <div class="advisory">
+          <mat-icon>smart_toy</mat-icon>
+          <div>
+            <strong>{{ r.screening.title }}</strong>
+            <p>{{ r.screening.message }} AI output is advisory; only a human review routes or closes this report.</p>
+          </div>
+        </div>
+        <div class="kv">
+          <div><label>Scope decision</label><p>{{ r['ScopeDecision'] ?? '—' }}</p></div>
+          <div><label>AI category</label><p>{{ r['AiCategory'] ?? '—' }}</p></div>
+          <div><label>AI urgency</label><p><app-chip [value]="r['AiRecommendedUrgency']" /></p></div>
+          <div><label>Certainty</label><p>{{ r['AiAnalysisCertainty'] ?? '—' }}</p></div>
+          <div><label>Needs review flag</label><p>{{ yes(r['AiNeedsReview']) }}</p></div>
+          <div><label>Recurrence / verifications</label><p>{{ r['RecurrenceCount'] ?? 0 }} / {{ r['VerificationCount'] ?? 0 }}</p></div>
+          <div class="span-all" style="grid-column: 1 / -1"><label>Summary</label><p>{{ r['AiSummary'] ?? '—' }}</p></div>
+          @if (r['AiPolicyReason']) {
+            <div style="grid-column: 1 / -1"><label>Policy note</label><p>{{ r['AiPolicyReason'] }}</p></div>
+          }
+          @if (risks().length) {
+            <div style="grid-column: 1 / -1">
+              <label>Risk indicators</label>
+              <div class="risk">
+                @for (x of risks(); track x) {
+                  <span class="chip tone-danger">{{ x }}</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="card">
+        <header>
+          <h2>Maintenance Request {{ mr()?.['RequestNo'] ?? '' }}</h2>
+          @if (canRegenerate()) {
+            <button mat-stroked-button (click)="regenerate()" [disabled]="busy()"><mat-icon>auto_awesome</mat-icon>Regenerate AI draft</button>
+          }
+        </header>
+        @if (mr(); as mr) {
+          <div class="kv">
+            <div><label>Status</label><p><app-chip [value]="mr['Status']" /></p></div>
+            <div><label>Category / urgency</label><p>{{ mr['EffectiveCategory'] ?? '—' }} · {{ mr['EffectiveUrgency'] ?? '—' }}</p></div>
+            <div><label>Labor hours</label><p>{{ mr['EstimatedLaborHoursMin'] ?? '?' }}–{{ mr['EstimatedLaborHoursMax'] ?? '?' }}</p></div>
+            <div><label>Crew</label><p>{{ mr['EstimatedManpowerMin'] ?? '?' }}–{{ mr['EstimatedManpowerMax'] ?? '?' }}</p></div>
+            <div><label>Required service</label><p>{{ mr['RequiredService'] ?? '—' }}</p></div>
+            <div><label>Required capability</label><p>{{ mr['RequiredCapability'] ?? '—' }}</p></div>
+            <div style="grid-column: 1 / -1"><label>Scope of work</label><p>{{ mr['ScopeOfWork'] ?? '—' }}</p></div>
+            <div style="grid-column: 1 / -1"><label>Safety requirements</label><p>{{ mr['SafetyRequirements'] ?? '—' }}</p></div>
+            @if (mr['PreliminaryMaterialsNotes']) {
+              <div style="grid-column: 1 / -1"><label>Preliminary materials</label><p>{{ mr['PreliminaryMaterialsNotes'] }}</p></div>
+            }
+          </div>
+        } @else {
+          <p class="muted">No Maintenance Request draft yet.</p>
+        }
+      </section>
+
+      @if (canReview()) {
+        <section class="card" id="review">
+          <h2>Maintenance Review decision</h2>
+          <form [formGroup]="form" (ngSubmit)="submitReview()">
+            <mat-radio-group formControlName="decision" class="decisions" aria-label="Decision">
+              <mat-radio-button value="INTERNAL" [disabled]="!canRoute()">Internal</mat-radio-button>
+              <mat-radio-button value="PROCUREMENT" [disabled]="!canRoute()">Procurement</mat-radio-button>
+              <mat-radio-button value="NO_ACTION">No action</mat-radio-button>
+              <mat-radio-button value="DUPLICATE">Duplicate</mat-radio-button>
+            </mat-radio-group>
+            @if (!canRoute()) {
+              <p class="muted">Internal/Procurement routing needs a Facility Issue assessment with an AI draft.</p>
+            }
+
+            @if (decision() === 'INTERNAL' || decision() === 'PROCUREMENT') {
+              <div class="form-grid">
+                <mat-form-field>
+                  <mat-label>Final category</mat-label>
+                  <mat-select formControlName="finalCategory">
+                    @for (c of categories(); track c.code) {
+                      <mat-option [value]="c.name">{{ c.name }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                <mat-form-field>
+                  <mat-label>Final urgency</mat-label>
+                  <mat-select formControlName="finalUrgency">
+                    @for (u of urgencies; track u) {
+                      <mat-option [value]="u">{{ u }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                @if (overridden()) {
+                  <mat-form-field class="span-all">
+                    <mat-label>Override reason (required)</mat-label>
+                    <textarea matInput rows="2" formControlName="overrideReason"></textarea>
+                    <mat-hint>You changed the AI category or urgency.</mat-hint>
+                  </mat-form-field>
+                }
+                @for (f of draftFields; track f[0]) {
+                  <mat-form-field class="span-all">
+                    <mat-label>{{ f[2] }}</mat-label>
+                    <textarea matInput rows="2" [formControlName]="f[0]"></textarea>
+                  </mat-form-field>
+                }
+              </div>
+            }
+
+            @if (decision() === 'NO_ACTION' || decision() === 'DUPLICATE') {
+              <mat-form-field class="full">
+                <mat-label>Decision reason (required)</mat-label>
+                <textarea matInput rows="2" formControlName="decisionReason"></textarea>
+              </mat-form-field>
+            }
+
+            @if (decision() === 'DUPLICATE') {
+              <mat-form-field class="full">
+                <mat-label>Original report</mat-label>
+                <mat-select formControlName="duplicateReportId">
+                  @for (d of data.value()!.duplicateCandidates; track d['Id']) {
+                    <mat-option [value]="d['CandidateReportId']">
+                      {{ d['CandidateReportId'] }} · {{ d['MatchMethod'] | humanize }} {{ d['MatchScore'] ?? '' }}
+                    </mat-option>
+                  }
+                </mat-select>
+                <mat-hint>Agent duplicate candidates. Or paste a report ID below.</mat-hint>
+              </mat-form-field>
+              <mat-form-field class="full">
+                <mat-label>Original report ID</mat-label>
+                <input matInput formControlName="duplicateReportId" />
+              </mat-form-field>
+            }
+
+            <mat-form-field class="full">
+              <mat-label>Internal notes (optional)</mat-label>
+              <textarea matInput rows="2" formControlName="notes"></textarea>
+            </mat-form-field>
+            <button mat-flat-button type="submit" [disabled]="busy() || !decision()">Submit decision</button>
+          </form>
+        </section>
+      }
+
+      <section class="card">
+        <h2>Activity</h2>
+        <ul class="timeline">
+          @for (h of data.value()!.statusHistory; track $index) {
+            <li>
+              <span class="when">{{ h.CreatedAt | date: 'MMM d, y, h:mm a' }} · {{ h.StatusType | humanize }}</span>
+              <p>{{ h.OldStatus ? (h.OldStatus | humanize) + ' → ' : '' }}<strong>{{ h.NewStatus | humanize }}</strong></p>
+              @if (h.Reason) {
+                <p class="muted">{{ h.Reason }}</p>
+              }
+            </li>
+          } @empty {
+            <li><p class="muted">No history yet.</p></li>
+          }
+        </ul>
+      </section>
+    </div>
+
+    <aside class="card props">
+      <h2>Properties</h2>
+      <dl>
+        <dt>Status</dt><dd><app-chip [value]="r['Status']" /></dd>
+        <dt>Priority</dt><dd><app-priority [score]="r['LivePriorityScore']" /></dd>
+        <dt>Category</dt><dd>{{ r['EffectiveCategory'] ?? r['AiCategory'] ?? '—' }}</dd>
+        <dt>Urgency</dt><dd><app-chip [value]="r['EffectiveUrgency'] ?? r['AiRecommendedUrgency']" /></dd>
+        <dt>Building</dt><dd>{{ r['Building'] ?? '—' }}</dd>
+        <dt>Floor / area</dt><dd>{{ r['Floor'] ?? '—' }} · {{ r['RoomOrArea'] ?? '—' }}</dd>
+        <dt>Reporter</dt><dd>{{ r['ReporterName'] ?? '—' }}</dd>
+        <dt>Submitted</dt><dd>{{ r['CreatedAt'] | date: 'MMM d, y, h:mm a' }}</dd>
+        @if (data.value()!.maintenanceReview; as rv) {
+          <dt>Review</dt>
+          <dd>
+            @if (isStaff()) {
+              <a [routerLink]="['/maintenance/reviews', rv['Id']]">{{ rv['Decision'] | humanize }}</a>
+            } @else {
+              {{ rv['Decision'] | humanize }}
+            }
+          </dd>
+        }
+        @if (data.value()!.procurementHandoff; as ph) {
+          <dt>Handoff</dt><dd><a [routerLink]="['/procurement/handoffs', ph['Id']]">{{ ph['HandoffNo'] }}</a> · {{ ph['Status'] | humanize }}</dd>
+        }
+        @if (data.value()!.workOrder; as wo) {
+          <dt>Work order</dt><dd><a [routerLink]="['/work-orders', wo['Id']]">{{ wo['WorkOrderNo'] }}</a> · {{ wo['Status'] | humanize }}</dd>
+        }
+      </dl>
+      @if (canReview()) {
+        <div class="props-actions">
+          <a mat-flat-button href="#review" (click)="$event.preventDefault(); scroll()">Make review decision</a>
+        </div>
+      }
+    </aside>
+  </div>
+}

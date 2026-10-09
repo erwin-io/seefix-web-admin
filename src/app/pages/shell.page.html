@@ -1,6 +1,0 @@
-<div class="shell"><aside class="side"><div class="brand">SEE<span>FIX</span></div>
-<nav aria-label="Main workspace"><a *ngFor="let n of nav()" [routerLink]="n.path" routerLinkActive="active">{{n.title}}</a></nav>
-<p class="muted" style="margin-top:45px;color:#a3c5d3">Smart AI Maintenance<br>Prioritization System</p></aside>
-<div class="main"><header class="top"><div><strong>SEEFIX Operations</strong><small>Human-governed maintenance workflow</small></div>
-<div><strong>{{auth.session.user()?.fullName}}</strong><small>{{auth.session.user()?.role}}</small><button type="button" style="margin-top:9px" (click)="auth.logout()">Sign out</button></div></header>
-<main class="content"><router-outlet /></main></div></div>
