@@ -1,0 +1,16 @@
+// Inline status pills for ad-hoc labels (use <app-status-chip> for workflow statuses).
+.chip {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tone-ok { background: #e7f6ec; color: var(--sf-ok); }
+.tone-warn { background: #fff4e0; color: var(--sf-warn); }
+.tone-danger { background: #fdecec; color: var(--sf-danger); }
+.tone-info { background: #e8efff; color: var(--sf-info); }
+.tone-violet { background: #f1ebff; color: var(--sf-violet); }
+.tone-muted { background: #eef1f5; color: var(--sf-muted); }

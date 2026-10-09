@@ -1,0 +1,36 @@
+<h2 mat-dialog-title>Create user</h2>
+<mat-dialog-content>
+  @if (error()) {
+    <p class="error" role="alert">{{ error() }}</p>
+  }
+  <form [formGroup]="form" class="form-grid" id="create-user" (ngSubmit)="save()">
+    <mat-form-field class="span-all"><mat-label>Full name</mat-label><input matInput formControlName="fullName" /></mat-form-field>
+    <mat-form-field><mat-label>Email</mat-label><input matInput type="email" formControlName="email" /></mat-form-field>
+    <mat-form-field>
+      <mat-label>Username (optional)</mat-label>
+      <input matInput formControlName="username" />
+      <mat-hint>3–30: letters, digits, . _ -</mat-hint>
+    </mat-form-field>
+    <mat-form-field>
+      <mat-label>Role</mat-label>
+      <mat-select formControlName="role">
+        @for (r of roles; track r) {
+          <mat-option [value]="r">{{ label[r] }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field>
+      <mat-label>Temporary password</mat-label>
+      <input matInput type="password" formControlName="password" autocomplete="new-password" />
+      <mat-hint>8+ characters</mat-hint>
+    </mat-form-field>
+    <mat-form-field><mat-label>Job title</mat-label><input matInput formControlName="jobTitle" /></mat-form-field>
+    <mat-form-field><mat-label>Department / trade</mat-label><input matInput formControlName="departmentOrTrade" /></mat-form-field>
+    <mat-form-field><mat-label>Phone</mat-label><input matInput formControlName="phone" /></mat-form-field>
+    <mat-form-field><mat-label>Institutional ID</mat-label><input matInput formControlName="institutionalId" /></mat-form-field>
+  </form>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close>Cancel</button>
+  <button mat-flat-button type="submit" form="create-user" [disabled]="busy()">Create user</button>
+</mat-dialog-actions>

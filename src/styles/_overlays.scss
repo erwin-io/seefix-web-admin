@@ -1,0 +1,49 @@
+// Styles for content rendered in CDK overlays (menus), which component styles cannot reach.
+// Bell menu (rendered in overlay)
+.bell-menu.mat-mdc-menu-panel {
+  width: 380px;
+  max-width: 92vw;
+}
+
+.bell-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px 4px 16px;
+}
+
+.bell-item.mat-mdc-menu-item {
+  height: auto;
+  padding-top: 8px;
+  padding-bottom: 8px;
+
+  .mat-mdc-menu-item-text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &.unread .bell-title {
+    font-weight: 700;
+  }
+}
+
+.bell-msg {
+  font-size: 12px;
+  color: var(--sf-muted);
+  white-space: normal;
+}
+
+.bell-time {
+  font-size: 11px;
+  color: var(--sf-muted);
+}
+
+.bell-empty {
+  padding: 8px 16px;
+  color: var(--sf-muted);
+}
+
+.bell-all {
+  color: var(--sf-accent);
+  border-top: 1px solid var(--sf-border);
+}

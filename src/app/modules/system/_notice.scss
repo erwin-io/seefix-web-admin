@@ -1,0 +1,27 @@
+// Centered message card shared by the system pages.
+.notice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 460px;
+  margin: 40px auto;
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--sf-muted);
+
+  h2 {
+    margin: 0;
+    color: var(--sf-text);
+  }
+}
+
+.icon {
+  font-size: 44px;
+  width: 44px;
+  height: 44px;
+
+  &.error {
+    color: var(--sf-danger);
+  }
+}

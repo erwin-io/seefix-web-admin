@@ -1,0 +1,164 @@
+// Page scaffolding shared by all module pages: header, cards, toolbars, metrics, tables, forms.
+// ---- Page scaffolding ----
+.page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+
+  h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 600;
+  }
+
+  p {
+    margin: 4px 0 0;
+    color: var(--sf-muted);
+  }
+
+  .actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+}
+
+.card {
+  background: var(--sf-surface);
+  border: 1px solid var(--sf-border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+
+  > h2,
+  > header h2 {
+    margin: 0 0 12px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  > header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+
+    h2 {
+      margin: 0;
+    }
+  }
+}
+
+.toolbar-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+
+  mat-form-field {
+    width: 240px;
+  }
+}
+
+// Metric cards
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.metric {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  background: var(--sf-surface);
+  border: 1px solid var(--sf-border);
+  border-radius: 12px;
+  padding: 18px;
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.15s;
+
+  &:hover {
+    box-shadow: 0 4px 14px rgba(20, 33, 58, 0.08);
+  }
+
+  mat-icon {
+    padding: 10px;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: var(--sf-accent-soft);
+    color: var(--sf-accent);
+  }
+
+  strong {
+    display: block;
+    font-size: 26px;
+    line-height: 1.1;
+  }
+
+  span {
+    color: var(--sf-muted);
+  }
+}
+
+// ---- Tables ----
+.table-wrap {
+  background: var(--sf-surface);
+  border: 1px solid var(--sf-border);
+  border-radius: 12px;
+  overflow-x: auto;
+
+  table {
+    width: 100%;
+  }
+
+  tr.mat-mdc-row {
+    cursor: pointer;
+
+    &:hover {
+      background: #f8faff;
+    }
+  }
+
+  .mat-mdc-header-cell {
+    color: var(--sf-muted);
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .ref {
+    font-weight: 600;
+    color: var(--sf-accent);
+    white-space: nowrap;
+  }
+
+  .sub {
+    display: block;
+    color: var(--sf-muted);
+    font-size: 12px;
+    max-width: 420px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0 16px;
+
+  .span-all {
+    grid-column: 1 / -1;
+  }
+}

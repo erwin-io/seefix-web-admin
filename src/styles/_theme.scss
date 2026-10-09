@@ -1,0 +1,74 @@
+@use '@angular/material' as mat;
+
+// Help-desk style (Freshdesk/Zendesk-like): dark nav, light canvas, ticket detail with properties side panel.
+html {
+  color-scheme: light;
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$azure-palette,
+        tertiary: mat.$blue-palette,
+        theme-type: light,
+      ),
+      typography: (
+        plain-family: 'Inter, Roboto, sans-serif',
+        brand-family: 'Inter, Roboto, sans-serif',
+      ),
+      density: -1,
+    )
+  );
+
+  --sf-bg: #f4f6fa;
+  --sf-surface: #fff;
+  --sf-border: #e3e8ef;
+  --sf-text: #1b2533;
+  --sf-muted: #657285;
+  --sf-accent: #2563eb;
+  --sf-accent-soft: #e8efff;
+  --sf-nav-bg: #14213a;
+  --sf-nav-fg: #c9d3e3;
+  --sf-nav-fg-muted: #8796ad;
+  --sf-nav-active: rgba(255, 255, 255, 0.08);
+  --sf-ok: #15803d;
+  --sf-warn: #b45309;
+  --sf-danger: #c62828;
+  --sf-violet: #6d28d9;
+  --sf-info: #1d4ed8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--sf-bg);
+  color: var(--sf-text);
+  font-family: Inter, Roboto, 'Helvetica Neue', sans-serif;
+  font-size: 14px;
+}
+
+a {
+  color: var(--sf-accent);
+}
+
+.muted {
+  color: var(--sf-muted);
+}
+
+.full {
+  width: 100%;
+}
+
+.danger.mat-mdc-unelevated-button {
+  --mat-button-filled-container-color: var(--sf-danger);
+}
+
+.snack-error {
+  --mat-snack-bar-container-color: #5c1515;
+}

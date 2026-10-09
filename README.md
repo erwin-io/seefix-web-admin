@@ -31,6 +31,51 @@ npm run test:ci      # Vitest via @angular/build:unit-test
 > If `ng` does not return to the prompt after finishing on your machine, `.\build.ps1 build|lint|"test --watch=false"`
 > runs the same command and stops it once the result is printed.
 
+## Project structure
+
+Code is grouped by **business module** (the maintenance workflow), not by user role. Roles only decide which modules a
+user may open: `data.roles` on each module route plus `roleGuard`, with the API as the final authority.
+
+```text
+src/
+  styles.scss            global entry: @use the partials below
+  styles/                _theme (Material + tokens) · _layout · _ticket · _utilities · _overlays
+  app/
+    app.routes.ts        lazy-loads each module's *.routes.ts
+    core/                singletons, no UI
+      http/              api.service.ts · app-error.ts · interceptors.ts
+      auth/              session.service.ts · auth.guards.ts
+      notifications/     notification.service.ts (inbox + Pusher) · notification.model.ts
+      models/            user.model.ts (roles) · api.model.ts
+      utils/             load.ts (loading/error/value page helper)
+    shared/              reusable UI with no business logic
+      components/        status-chip · priority-badge · page-state · evidence-gallery · confirm-dialog
+      pipes/ services/ utils/   humanize · ui.service (confirm/toast) · entity-link
+      shared.imports.ts  SHARED_IMPORTS for pages
+    layout/shell/        sidebar, top bar, breadcrumbs, notification bell
+    modules/
+      <module>/
+        <module>.routes.ts     lazy routes for the module
+        <module>.service.ts    all HTTP calls for the module (pages never call ApiService directly)
+        <module>.models.ts     response/request types
+        pages/<page>/          <page>.page.ts · .html · .scss   (routed)
+        components/<name>/     <name>.component.ts · .html · .scss (module-only widgets/dialogs)
+```
+
+| Module | Routes | Used by |
+|---|---|---|
+| `auth` | `/login`, `/forgot-password`, `/reset-password` | everyone (public) |
+| `dashboard` | `/dashboard` | all staff |
+| `maintenance` | `/maintenance/*`, `/reports/:id` | Staff, Supervisor, Admin (+ linked Procurement/Worker for a report) |
+| `work-orders` | `/work-orders`, `/work-orders/:id` | Staff, Supervisor, Admin, Worker |
+| `procurement` | `/procurement/inbox`, `/procurement/handoffs/:id` | Procurement, Admin (+ Maintenance read) |
+| `admin` | `/admin/users`, `/admin/knowledge` | Admin |
+| `notifications`, `account` | `/notifications`, `/account` | all staff |
+| `system` | `/denied`, `/unavailable`, `**` | fallbacks |
+
+Conventions: every component/page has its own `templateUrl` and `styleUrl`. Imports use the `@app/*` and `@env/*` path
+aliases. Adding a module means adding a folder plus one `loadChildren` line in `app.routes.ts`.
+
 ## Configuration
 
 | File | Purpose |

@@ -1,0 +1,10 @@
+.list { padding: 0; }
+.item { display: flex; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--sf-border); cursor: pointer; }
+.item:last-child { border-bottom: 0; }
+.item:hover { background: #f8faff; }
+.dot { width: 8px; height: 8px; margin-top: 6px; border-radius: 50%; flex: none; background: transparent; }
+.unread .dot { background: var(--sf-accent); }
+.unread strong { font-weight: 700; }
+strong { font-weight: 500; }
+p { margin: 2px 0; color: var(--sf-muted); }
+small { color: var(--sf-muted); }

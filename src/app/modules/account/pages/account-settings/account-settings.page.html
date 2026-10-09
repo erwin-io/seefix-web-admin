@@ -1,0 +1,46 @@
+<div class="page-head">
+  <div>
+    <h1>Account settings</h1>
+    <p>{{ session.user()?.email }} · {{ roleLabel() }}</p>
+  </div>
+</div>
+<div class="grid">
+  <form class="card" [formGroup]="profile" (ngSubmit)="saveProfile()">
+    <h2>Profile</h2>
+    <mat-form-field class="full"><mat-label>Full name</mat-label><input matInput formControlName="fullName" /></mat-form-field>
+    <mat-form-field class="full"><mat-label>Phone</mat-label><input matInput formControlName="phone" /></mat-form-field>
+    <mat-form-field class="full"><mat-label>Job title</mat-label><input matInput formControlName="jobTitle" /></mat-form-field>
+    <mat-form-field class="full"><mat-label>Department / trade</mat-label><input matInput formControlName="departmentOrTrade" /></mat-form-field>
+    <button mat-flat-button type="submit" [disabled]="busy() || profile.pristine">Save profile</button>
+  </form>
+
+  <form class="card" [formGroup]="username" (ngSubmit)="saveUsername()">
+    <h2>Username</h2>
+    <p class="muted">Sign in with your email or this username.</p>
+    <mat-form-field class="full">
+      <mat-label>Username</mat-label><input matInput formControlName="username" autocomplete="username" />
+      <mat-hint>3–30: letters, digits, . _ -</mat-hint>
+    </mat-form-field>
+    <mat-form-field class="full"><mat-label>Current password</mat-label><input matInput type="password" formControlName="currentPassword" autocomplete="current-password" /></mat-form-field>
+    <button mat-flat-button type="submit" [disabled]="busy()">Change username</button>
+  </form>
+
+  <form class="card" [formGroup]="email" (ngSubmit)="saveEmail()">
+    <h2>Email</h2>
+    <p class="muted">Staff email changes apply immediately and sign you out everywhere.</p>
+    <mat-form-field class="full"><mat-label>New email</mat-label><input matInput type="email" formControlName="newEmail" autocomplete="email" /></mat-form-field>
+    <mat-form-field class="full"><mat-label>Current password</mat-label><input matInput type="password" formControlName="currentPassword" autocomplete="current-password" /></mat-form-field>
+    <button mat-flat-button type="submit" [disabled]="busy()">Change email</button>
+  </form>
+
+  <form class="card" [formGroup]="password" (ngSubmit)="savePassword()">
+    <h2>Password</h2>
+    <p class="muted">Changing your password signs you out on all devices.</p>
+    <mat-form-field class="full"><mat-label>Current password</mat-label><input matInput type="password" formControlName="currentPassword" autocomplete="current-password" /></mat-form-field>
+    <mat-form-field class="full">
+      <mat-label>New password</mat-label><input matInput type="password" formControlName="newPassword" autocomplete="new-password" />
+      <mat-hint>At least 8 characters.</mat-hint>
+    </mat-form-field>
+    <button mat-flat-button type="submit" [disabled]="busy()">Change password</button>
+  </form>
+</div>

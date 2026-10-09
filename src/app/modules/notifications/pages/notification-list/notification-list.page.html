@@ -1,0 +1,27 @@
+<div class="page-head">
+  <div>
+    <h1>Notifications</h1>
+    <p>{{ inbox.unread() }} unread{{ inbox.live() ? ' · live' : '' }}</p>
+  </div>
+  <div class="actions">
+    <mat-button-toggle-group [value]="filter()" (change)="filter.set($event.value)" hideSingleSelectionIndicator>
+      <mat-button-toggle value="all">All</mat-button-toggle>
+      <mat-button-toggle value="unread">Unread</mat-button-toggle>
+    </mat-button-toggle-group>
+    <button mat-stroked-button (click)="inbox.load()"><mat-icon>refresh</mat-icon>Refresh</button>
+    <button mat-flat-button [disabled]="!inbox.unread()" (click)="readAll()">Mark all read</button>
+  </div>
+</div>
+<div class="card list">
+  <app-page-state [loading]="inbox.loading() && !inbox.items().length" [empty]="shown().length ? null : 'No notifications'" icon="notifications_none" />
+  @for (n of shown(); track n.id) {
+    <div class="item" [class.unread]="!n.isRead" (click)="open(n)" (keydown.enter)="open(n)" tabindex="0" role="link">
+      <span class="dot"></span>
+      <div>
+        <strong>{{ n.title }}</strong>
+        <p>{{ n.message }}</p>
+        <small>{{ n.createdAt | date: 'medium' }} · {{ n.type | humanize }}</small>
+      </div>
+    </div>
+  }
+</div>

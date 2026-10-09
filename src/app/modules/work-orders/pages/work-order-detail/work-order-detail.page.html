@@ -1,0 +1,242 @@
+<app-page-state [loading]="data.loading() && !wo()" [error]="wo() ? null : data.error()" (retry)="data.reload()" />
+
+@if (wo(); as w) {
+  <div class="ticket-head">
+    <h1>{{ w['WorkOrderNo'] }}</h1>
+    <app-status-chip [value]="w['Status']" />
+    <span class="muted">{{ w['RouteType'] | humanize }} route</span>
+    <span style="flex: 1"></span>
+    <button mat-stroked-button (click)="data.reload(); completion.reload()" [disabled]="data.loading()"><mat-icon>refresh</mat-icon>Refresh</button>
+  </div>
+
+  <div class="ticket">
+    <div>
+      <section class="card">
+        <h2>Work details</h2>
+        <div class="kv">
+          <div><label>Execution type</label><p>{{ w['ExecutionType'] | humanize }}</p></div>
+          <div><label>Planned start</label><p>{{ (w['PlannedStartAt'] | date: 'MMM d, y') ?? '—' }}</p></div>
+          <div><label>Deadline</label><p>{{ (w['Deadline'] | date: 'MMM d, y') ?? '—' }}</p></div>
+          <div><label>Planned crew / hours</label><p>{{ w['PlannedCrewSize'] ?? '—' }} / {{ w['PlannedLaborHours'] ?? '—' }}</p></div>
+          @if (w['ProcurementReferenceNo']) {
+            <div><label>Procurement ref.</label><p>{{ w['ProcurementReferenceNo'] }}</p></div>
+          }
+          <div style="grid-column: 1 / -1"><label>Instructions</label><p>{{ w['Instructions'] ?? '—' }}</p></div>
+          <div style="grid-column: 1 / -1"><label>Safety requirements</label><p>{{ w['SafetyRequirements'] ?? '—' }}</p></div>
+        </div>
+        @if (otherPhotos().length) {
+          <h2 style="margin-top: 16px">Photos</h2>
+          <app-evidence-gallery [urls]="otherPhotos()" />
+        }
+      </section>
+
+      @if (w['CompletionSubmittedAt'] || completionPhotos().length) {
+        <section class="card">
+          <h2>Completion evidence</h2>
+          <app-evidence-gallery [urls]="completionPhotos()" />
+          <div class="kv" style="margin-top: 12px">
+            <div style="grid-column: 1 / -1"><label>Repair notes</label><p>{{ w['RepairNotes'] ?? '—' }}</p></div>
+            <div><label>Actual labor hours</label><p>{{ w['ActualLaborHours'] ?? '—' }}</p></div>
+            <div><label>Actual crew</label><p>{{ w['ActualCrewSize'] ?? '—' }}</p></div>
+            <div><label>Actual days</label><p>{{ w['ActualDurationDays'] ?? '—' }}</p></div>
+            <div><label>Submitted</label><p>{{ w['CompletionSubmittedAt'] | date: 'MMM d, h:mm a' }}</p></div>
+          </div>
+          <div class="advisory" style="margin-top: 12px">
+            <mat-icon>smart_toy</mat-icon>
+            <div>
+              <strong>AI completion check: {{ (completion.value()?.['completionAgentStatus'] ?? w['CompletionAgentStatus']) | humanize }}</strong>
+              <p>
+                Visual result: {{ (completion.value()?.['visualResult'] ?? w['CompletionVisualResult']) ?? 'pending' }}.
+                Advisory only; the Maintenance Supervisor decides acceptance.
+              </p>
+            </div>
+          </div>
+          @if (completion.value()?.['assessment']; as a) {
+            <details><summary class="muted">Assessment details</summary><pre>{{ a | json }}</pre></details>
+          }
+        </section>
+      }
+
+      @if (!closed()) {
+        <mat-accordion multi>
+          @if (status() === 'IN_PROGRESS') {
+            <mat-expansion-panel [expanded]="true">
+              <mat-expansion-panel-header><mat-panel-title>Submit completion</mat-panel-title></mat-expansion-panel-header>
+              <form [formGroup]="completionForm" (ngSubmit)="submitCompletion()">
+                <input #picker type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="addFiles(picker)" />
+                <button mat-stroked-button type="button" (click)="picker.click()"><mat-icon>add_a_photo</mat-icon>Add completion photos</button>
+                <span class="muted"> {{ files().length }}/5 · JPEG, PNG or WebP, max 10 MB each</span>
+                <div class="previews">
+                  @for (f of files(); track f.url; let i = $index) {
+                    <figure>
+                      <img [src]="f.url" [alt]="f.file.name" />
+                      <button mat-mini-fab type="button" (click)="removeFile(i)" aria-label="Remove photo"><mat-icon>close</mat-icon></button>
+                    </figure>
+                  }
+                </div>
+                <div class="form-grid">
+                  <mat-form-field class="span-all">
+                    <mat-label>Repair notes (required)</mat-label>
+                    <textarea matInput rows="3" formControlName="repairNotes"></textarea>
+                  </mat-form-field>
+                  <mat-form-field><mat-label>Actual labor hours</mat-label><input matInput type="number" formControlName="actualLaborHours" /></mat-form-field>
+                  <mat-form-field><mat-label>Actual crew size</mat-label><input matInput type="number" formControlName="actualCrewSize" /></mat-form-field>
+                  <mat-form-field><mat-label>Actual duration (days)</mat-label><input matInput type="number" formControlName="actualDurationDays" /></mat-form-field>
+                  <mat-form-field class="span-all"><mat-label>Materials notes</mat-label><textarea matInput rows="2" formControlName="actualMaterialsNotes"></textarea></mat-form-field>
+                </div>
+                <button mat-flat-button type="submit" [disabled]="busy()">Submit completion</button>
+              </form>
+            </mat-expansion-panel>
+          }
+
+          <mat-expansion-panel>
+            <mat-expansion-panel-header><mat-panel-title>Log progress update</mat-panel-title></mat-expansion-panel-header>
+            <form [formGroup]="updateForm" (ngSubmit)="addUpdate()" class="form-grid">
+              <mat-form-field class="span-all"><mat-label>Message</mat-label><textarea matInput rows="2" formControlName="message"></textarea></mat-form-field>
+              <mat-form-field>
+                <mat-label>Type</mat-label>
+                <mat-select formControlName="updateType">
+                  @for (t of ['PROGRESS', 'NOTE', 'PARTS', 'HOLD', 'OTHER']; track t) {
+                    <mat-option [value]="t">{{ t | humanize }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field><mat-label>Progress %</mat-label><input matInput type="number" min="0" max="100" formControlName="progressPercent" /></mat-form-field>
+              <div class="span-all"><button mat-flat-button type="submit" [disabled]="busy()">Add update</button></div>
+            </form>
+          </mat-expansion-panel>
+
+          <mat-expansion-panel>
+            <mat-expansion-panel-header><mat-panel-title>Crew ({{ data.value()!.people.length }})</mat-panel-title></mat-expansion-panel-header>
+            @for (p of data.value()!.people; track p['Id']) {
+              <div class="list-row">
+                <span><strong>{{ p['FullName'] }}</strong> {{ p['IsLead'] ? '(lead)' : '' }} <span class="muted">{{ p['RoleOrTrade'] }}</span></span>
+                <span class="muted">{{ p['Contact'] }}</span>
+              </div>
+            }
+            <form [formGroup]="personForm" (ngSubmit)="addPerson()" class="form-grid" style="margin-top: 12px">
+              <mat-form-field><mat-label>Full name</mat-label><input matInput formControlName="fullName" /></mat-form-field>
+              <mat-form-field><mat-label>Role / trade</mat-label><input matInput formControlName="roleOrTrade" /></mat-form-field>
+              <mat-form-field><mat-label>Contact</mat-label><input matInput formControlName="contact" /></mat-form-field>
+              <mat-checkbox formControlName="isLead">Crew lead</mat-checkbox>
+              <div class="span-all"><button mat-stroked-button type="submit" [disabled]="busy()">Add crew member</button></div>
+            </form>
+          </mat-expansion-panel>
+
+          <mat-expansion-panel>
+            <mat-expansion-panel-header><mat-panel-title>Materials ({{ data.value()!.materials.length }})</mat-panel-title></mat-expansion-panel-header>
+            @for (m of data.value()!.materials; track m['Id']) {
+              <div class="list-row">
+                <span><strong>{{ m['MaterialName'] }}</strong> <span class="muted">{{ m['Notes'] }}</span></span>
+                <span>{{ m['Quantity'] ?? '—' }} {{ m['Unit'] }} · <app-status-chip [value]="m['Stage']" /></span>
+              </div>
+            }
+            <form [formGroup]="materialForm" (ngSubmit)="addMaterial()" class="form-grid" style="margin-top: 12px">
+              <mat-form-field><mat-label>Material</mat-label><input matInput formControlName="materialName" /></mat-form-field>
+              <mat-form-field><mat-label>Quantity</mat-label><input matInput type="number" formControlName="quantity" /></mat-form-field>
+              <mat-form-field><mat-label>Unit</mat-label><input matInput formControlName="unit" /></mat-form-field>
+              <mat-form-field>
+                <mat-label>Stage</mat-label>
+                <mat-select formControlName="stage">
+                  <mat-option value="ACTUAL">Actual (used)</mat-option>
+                  <mat-option value="PLANNED">Planned</mat-option>
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field class="span-all"><mat-label>Notes</mat-label><input matInput formControlName="notes" /></mat-form-field>
+              <div class="span-all"><button mat-stroked-button type="submit" [disabled]="busy()">Record material</button></div>
+            </form>
+          </mat-expansion-panel>
+        </mat-accordion>
+      }
+
+      <section class="card">
+        <h2>Activity</h2>
+        <ul class="timeline">
+          @for (u of data.value()!.updates; track u['Id']) {
+            <li>
+              <span class="when">{{ u['CreatedAt'] | date: 'MMM d, y, h:mm a' }} · {{ u['UpdateType'] | humanize }} · {{ u['StatusSnapshot'] | humanize }}{{ u['ProgressPercent'] !== null ? ' · ' + u['ProgressPercent'] + '%' : '' }}</span>
+              <p>{{ u['Message'] }}</p>
+            </li>
+          } @empty {
+            <li><p class="muted">No updates yet.</p></li>
+          }
+        </ul>
+      </section>
+    </div>
+
+    <aside>
+      <section class="card props">
+        <h2>Properties</h2>
+        <dl>
+          <dt>Status</dt><dd><app-status-chip [value]="w['Status']" /></dd>
+          <dt>Assigned to</dt><dd>{{ w['AssignedPartyName'] ?? 'Unassigned' }}</dd>
+          <dt>Responsible lead</dt><dd>{{ w['ResponsibleLeadName'] ?? '—' }}</dd>
+          <dt>Lead contact</dt><dd>{{ w['ResponsibleLeadContact'] ?? w['ResponsibleLeadEmail'] ?? '—' }}</dd>
+          <dt>Assigned</dt><dd>{{ (w['AssignedAt'] | date: 'MMM d, h:mm a') ?? '—' }}</dd>
+          <dt>Started</dt><dd>{{ (w['StartedAt'] | date: 'MMM d, h:mm a') ?? '—' }}</dd>
+          <dt>Resolved</dt><dd>{{ (w['ResolvedAt'] | date: 'MMM d, h:mm a') ?? '—' }}</dd>
+          <dt>Report</dt><dd><a [routerLink]="['/reports', w['ReportId']]">Open report</a></dd>
+        </dl>
+        <div class="props-actions">
+          @if (status() === 'ASSIGNED') {
+            <button mat-flat-button (click)="start()" [disabled]="busy()"><mat-icon>play_arrow</mat-icon>Start work</button>
+          }
+          @for (t of nextStatuses(); track t) {
+            <button mat-stroked-button (click)="setStatus(t)" [disabled]="busy()">{{ t === 'IN_PROGRESS' ? 'Resume work' : 'Set ' + (t | humanize) }}</button>
+          }
+          @if (status() === 'COMPLETION_SUBMITTED' && isSupervisor()) {
+            <button mat-flat-button (click)="accept()" [disabled]="busy()"><mat-icon>verified</mat-icon>Accept completion</button>
+            <button mat-stroked-button (click)="rework()" [disabled]="busy()"><mat-icon>replay</mat-icon>Request rework</button>
+          }
+          @if (status() === 'COMPLETION_SUBMITTED' && !isSupervisor()) {
+            <p class="muted">Awaiting Maintenance Supervisor acceptance.</p>
+          }
+        </div>
+      </section>
+
+      @if (canAssign()) {
+        <section class="card">
+          <header>
+            <h2>{{ status() === 'ASSIGNED' ? 'Reassign' : 'Dispatch' }}</h2>
+            <button mat-button (click)="prefillAssign()">Use current</button>
+          </header>
+          <form [formGroup]="assignForm" (ngSubmit)="assign()">
+            <mat-form-field class="full"><mat-label>Assigned party</mat-label><input matInput formControlName="assignedPartyName" placeholder="e.g. SEEFIX Electrical Team" /></mat-form-field>
+            <mat-form-field class="full">
+              <mat-label>Responsible lead (user)</mat-label>
+              <mat-select formControlName="responsibleLeadUserId" (selectionChange)="pickLead($event.value)">
+                <mat-option value="">— External / name only —</mat-option>
+                @for (u of assignees(); track u.id) {
+                  <mat-option [value]="u.id">{{ u.fullName }} · {{ u.role | humanize }}{{ u.departmentOrTrade ? ' · ' + u.departmentOrTrade : '' }}</mat-option>
+                }
+              </mat-select>
+              <mat-hint>Workers only see work orders where they are the lead user.</mat-hint>
+            </mat-form-field>
+            <mat-form-field class="full"><mat-label>Lead name</mat-label><input matInput formControlName="responsibleLeadName" /></mat-form-field>
+            <mat-form-field class="full"><mat-label>Lead contact</mat-label><input matInput formControlName="responsibleLeadContact" /></mat-form-field>
+            <mat-form-field class="full"><mat-label>Lead email</mat-label><input matInput formControlName="responsibleLeadEmail" /></mat-form-field>
+            <mat-form-field class="full"><mat-label>Reason (optional)</mat-label><input matInput formControlName="reason" /></mat-form-field>
+            <button mat-flat-button type="submit" class="full" [disabled]="busy()">{{ status() === 'ASSIGNED' ? 'Reassign' : 'Dispatch' }}</button>
+          </form>
+        </section>
+      }
+
+      @if (data.value()!.assignments.length) {
+        <section class="card">
+          <h2>Assignment history</h2>
+          <ul class="timeline">
+            @for (a of data.value()!.assignments; track a['Id']) {
+              <li>
+                <span class="when">{{ a['AssignedAt'] | date: 'MMM d, h:mm a' }}</span>
+                <p>{{ a['AssignedPartyName'] }} · {{ a['ResponsibleLeadName'] }}</p>
+                @if (a['Reason']) {
+                  <p class="muted">{{ a['Reason'] }}</p>
+                }
+              </li>
+            }
+          </ul>
+        </section>
+      }
+    </aside>
+  </div>
+}

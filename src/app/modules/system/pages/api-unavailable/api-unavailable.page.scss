@@ -1,0 +1,8 @@
+@use '../../notice';
+
+:host {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 16px;
+}

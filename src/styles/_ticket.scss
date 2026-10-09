@@ -1,0 +1,134 @@
+// Help-desk "ticket" detail layout: main column + sticky properties panel, key/value grid, advisory, timeline.
+// ---- Ticket-style detail page ----
+.ticket {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
+  align-items: start;
+
+  @media (max-width: 1100px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ticket-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+
+  h1 {
+    margin: 0;
+    font-size: 22px;
+  }
+
+  .ref {
+    color: var(--sf-muted);
+    font-weight: 500;
+  }
+}
+
+.props {
+  position: sticky;
+  top: 76px;
+
+  dl {
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    gap: 10px 12px;
+    margin: 0;
+  }
+
+  dt {
+    color: var(--sf-muted);
+  }
+
+  dd {
+    margin: 0;
+    word-break: break-word;
+  }
+
+  .props-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+  }
+}
+
+.kv {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px 20px;
+
+  label {
+    display: block;
+    color: var(--sf-muted);
+    font-size: 12px;
+    margin-bottom: 2px;
+  }
+
+  p {
+    margin: 0;
+    white-space: pre-line;
+  }
+}
+
+.advisory {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f5f0ff;
+  border: 1px solid #e3d7ff;
+  color: #3b1f73;
+  margin-bottom: 12px;
+
+  mat-icon {
+    flex: none;
+  }
+
+  p {
+    margin: 2px 0 0;
+  }
+}
+
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    position: relative;
+    padding: 0 0 16px 22px;
+    border-left: 2px solid var(--sf-border);
+    margin-left: 6px;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: -7px;
+      top: 2px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--sf-surface);
+      border: 2px solid var(--sf-accent);
+    }
+
+    &:last-child {
+      border-left-color: transparent;
+    }
+  }
+
+  .when {
+    color: var(--sf-muted);
+    font-size: 12px;
+  }
+
+  p {
+    margin: 2px 0 0;
+    white-space: pre-line;
+  }
+}

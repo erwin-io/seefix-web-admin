@@ -1,0 +1,5 @@
+.attention a { display: flex; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--sf-border);
+  text-decoration: none; color: inherit; }
+.attention a:last-child { border-bottom: 0; }
+.attention .grow { flex: 1; min-width: 0; }
+.attention small { color: var(--sf-muted); display: block; }
