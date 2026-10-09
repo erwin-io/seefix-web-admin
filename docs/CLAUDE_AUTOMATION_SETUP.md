@@ -4,7 +4,7 @@ This GitHub Action is **not activated** until its workflow PR is reviewed, merge
 
 ## One-time owner actions
 1. Confirm the **Claude GitHub App** has access to this exact repo in Claude Connectors or GitHub's Installed GitHub Apps.
-2. In GitHub: Settings → Secrets and variables → Actions → New repository secret; name it `ANTHROPIC_API_KEY` and paste your key from Anthropic Console (never paste it into issues, PRs or code). This is separately billed from the Claude web subscription.
+2. Run `claude setup-token` (signed in with the Claude Pro/Max account). In GitHub: Settings → Secrets and variables → Actions → **Secrets** tab (not Variables) → New repository secret; name it `CLAUDE_CODE_OAUTH_TOKEN` and paste the token (never paste it into issues, PRs or code). Runs count against the subscription's usage limits. To use pay-as-you-go API billing instead, store an Anthropic Console key as `ANTHROPIC_API_KEY` and switch the action input to `anthropic_api_key`.
 3. Settings → Rules → Rulesets (or Branch protection): require PRs for main; disallow direct pushes and force pushes; require appropriate CI checks and non-author review for security/RBAC/database changes.
 4. Review and merge this workflow PR. **Do not merge before these checks.**
 5. Create the `claude-build` issue label if you want label-driven execution.
