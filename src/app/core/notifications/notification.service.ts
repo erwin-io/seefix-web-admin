@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { environment } from '@env/environment';
 import type Pusher from 'pusher-js';
+import type { Options } from 'pusher-js';
 import { firstValueFrom } from 'rxjs';
 import { SessionService } from '../auth/session.service';
 import { ApiService, apiUrl } from '../http/api.service';
@@ -66,8 +67,7 @@ export class NotificationService {
     try {
       const cfg = await firstValueFrom(this.api.get<RealtimeConfig>('/api/realtime/config'));
       if (!cfg.enabled || !cfg.key || !cfg.cluster) return;
-      const { default: PusherJs } = await import('pusher-js');
-      const pusher = new PusherJs(cfg.key, {
+      const pusher = await this.createPusher(cfg.key, {
         cluster: cfg.cluster,
         channelAuthorization: {
           endpoint: apiUrl('/api/realtime/auth'),
@@ -85,6 +85,12 @@ export class NotificationService {
     } catch {
       this.live.set(false);
     }
+  }
+
+  /** Test seam: the spec swaps in a fake client to drive the connection lifecycle. */
+  protected async createPusher(key: string, options: Options): Promise<Pusher> {
+    const { default: PusherJs } = await import('pusher-js');
+    return new PusherJs(key, options);
   }
 
   /** Re-read on every (re)connect to catch events missed while offline. */
