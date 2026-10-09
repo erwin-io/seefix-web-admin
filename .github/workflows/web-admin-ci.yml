@@ -1,0 +1,21 @@
+name: Web Admin Angular CI
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [feat/web-admin-mvp-foundation]
+jobs:
+  web-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.17.1'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: TypeScript check
+        run: npm run typecheck
+      - name: Angular production build
+        run: npm run build
