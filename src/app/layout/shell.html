@@ -1,0 +1,85 @@
+<mat-sidenav-container class="shell">
+  <mat-sidenav
+    #drawer
+    class="sidebar"
+    [mode]="mobile() ? 'over' : 'side'"
+    [opened]="!mobile() && navOpen()"
+    [fixedInViewport]="mobile()"
+  >
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">SF</span>
+      <div>
+        <strong>SEEFIX</strong>
+        <small>Maintenance Admin</small>
+      </div>
+    </div>
+    <mat-nav-list>
+      @for (item of nav(); track item.link) {
+        <a mat-list-item [routerLink]="item.link" routerLinkActive="active" (click)="closeOnMobile(drawer)">
+          <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+          <span matListItemTitle>{{ item.label }}</span>
+        </a>
+      }
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <mat-toolbar class="topbar">
+      <button mat-icon-button aria-label="Toggle navigation" (click)="mobile() ? drawer.toggle() : navOpen.set(!navOpen())">
+        <mat-icon>menu</mat-icon>
+      </button>
+      <nav class="crumbs" aria-label="Breadcrumb">
+        @for (c of crumbs(); track $index; let last = $last) {
+          <span [class.current]="last">{{ c }}</span>
+          @if (!last) {
+            <mat-icon class="sep">chevron_right</mat-icon>
+          }
+        }
+      </nav>
+      <span class="spacer"></span>
+
+      <button
+        mat-icon-button
+        [matMenuTriggerFor]="bell"
+        aria-label="Notifications"
+        [matTooltip]="inbox.live() ? 'Live updates on' : 'Notifications'"
+      >
+        <mat-icon [matBadge]="inbox.unread() || null" matBadgeColor="warn" matBadgeSize="small">notifications</mat-icon>
+      </button>
+      <mat-menu #bell="matMenu" class="bell-menu" xPosition="before">
+        <div class="bell-head" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="-1">
+          <strong>Notifications</strong>
+          @if (inbox.unread()) {
+            <button mat-button (click)="inbox.markAllRead()">Mark all read</button>
+          }
+        </div>
+        @for (n of recent(); track n.id) {
+          <button mat-menu-item class="bell-item" [class.unread]="!n.isRead" (click)="open(n)">
+            <span class="bell-title">{{ n.title }}</span>
+            <span class="bell-msg">{{ n.message }}</span>
+            <span class="bell-time">{{ n.createdAt | date: 'MMM d, h:mm a' }}</span>
+          </button>
+        } @empty {
+          <p class="bell-empty">You're all caught up.</p>
+        }
+        <a mat-menu-item routerLink="/notifications" class="bell-all">View all notifications</a>
+      </mat-menu>
+
+      <button mat-button [matMenuTriggerFor]="me" class="me">
+        <span class="avatar">{{ initials() }}</span>
+        <span class="me-text">
+          <span>{{ session.user()?.fullName }}</span>
+          <small>{{ roleLabel() }}</small>
+        </span>
+      </button>
+      <mat-menu #me="matMenu" xPosition="before">
+        <a mat-menu-item routerLink="/account"><mat-icon>manage_accounts</mat-icon>Account settings</a>
+        <button mat-menu-item (click)="session.end('You have signed out.')"><mat-icon>logout</mat-icon>Sign out</button>
+      </mat-menu>
+    </mat-toolbar>
+
+    <main class="content">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

@@ -1,0 +1,74 @@
+import { DatePipe } from '@angular/common';
+import { Component, computed, inject, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { MatButtonModule } from '@angular/material/button';
+import { Api } from '../../core/api';
+import { load } from '../../core/load';
+import { Row } from '../../core/models';
+import { SHARED } from '../../shared/ui';
+
+/** GET /api/maintenance/reviews/:id takes the MaintenanceReview id (not the report id). */
+@Component({
+  selector: 'app-review-detail-page',
+  imports: [DatePipe, RouterLink, MatButtonModule, ...SHARED],
+  template: `
+    <app-state [loading]="data.loading() && !rv()" [error]="rv() ? null : data.error()" (retry)="data.reload()" />
+    @if (rv(); as rv) {
+      <div class="ticket-head">
+        <h1>Review · {{ rv['ReportNo'] }}</h1>
+        <app-chip [value]="rv['Decision']" />
+        <app-chip [value]="rv['Status']" />
+        <span style="flex: 1"></span>
+        <a mat-stroked-button [routerLink]="['/reports', rv['ReportId']]">Open report</a>
+      </div>
+      <div class="ticket">
+        <div>
+          <section class="card">
+            <h2>Human decision</h2>
+            <div class="kv">
+              <div><label>Decision</label><p>{{ rv['Decision'] | humanize }}</p></div>
+              <div><label>Reviewed</label><p>{{ rv['ReviewedAt'] | date: 'MMM d, y, h:mm a' }}</p></div>
+              <div><label>Final category</label><p>{{ rv['FinalCategory'] ?? '—' }}</p></div>
+              <div><label>Final urgency</label><p>{{ rv['FinalUrgency'] ?? '—' }}</p></div>
+              <div><label>Priority at review</label><p><app-priority [score]="rv['PriorityScoreAtReview']" /></p></div>
+              <div><label>Live priority</label><p><app-priority [score]="rv['LivePriorityScore']" /></p></div>
+              <div style="grid-column: 1 / -1"><label>Override reason</label><p>{{ rv['OverrideReason'] ?? '—' }}</p></div>
+              <div style="grid-column: 1 / -1"><label>Decision reason</label><p>{{ rv['DecisionReason'] ?? '—' }}</p></div>
+              <div style="grid-column: 1 / -1"><label>Notes</label><p>{{ rv['Notes'] ?? '—' }}</p></div>
+            </div>
+          </section>
+          <section class="card">
+            <h2>Maintenance Request {{ rv['RequestNo'] ?? '' }}</h2>
+            <div class="kv">
+              <div><label>Status</label><p><app-chip [value]="rv['MaintenanceRequestStatus']" /></p></div>
+              <div><label>Required service</label><p>{{ rv['RequiredService'] ?? '—' }}</p></div>
+              <div><label>Required capability</label><p>{{ rv['RequiredCapability'] ?? '—' }}</p></div>
+              <div style="grid-column: 1 / -1"><label>Scope of work</label><p>{{ rv['ScopeOfWork'] ?? '—' }}</p></div>
+              <div style="grid-column: 1 / -1"><label>Safety requirements</label><p>{{ rv['SafetyRequirements'] ?? '—' }}</p></div>
+            </div>
+          </section>
+        </div>
+        <aside class="card props">
+          <h2>Report</h2>
+          <dl>
+            <dt>Report status</dt><dd><app-chip [value]="rv['ReportStatus']" /></dd>
+            <dt>AI category</dt><dd>{{ rv['AiCategory'] ?? '—' }}</dd>
+            <dt>AI urgency</dt><dd>{{ rv['AiRecommendedUrgency'] ?? '—' }}</dd>
+            <dt>Screening</dt><dd>{{ rv['screening']?.title }}</dd>
+            <dt>Location</dt><dd>{{ location() }}</dd>
+          </dl>
+        </aside>
+      </div>
+    }
+  `,
+})
+export class ReviewDetailPage {
+  private readonly api = inject(Api);
+  readonly id = input.required<string>();
+  readonly data = load(() => this.api.get<{ review: Row }>(`/api/maintenance/reviews/${this.id()}`));
+  readonly rv = computed(() => this.data.value()?.review ?? null);
+  readonly location = computed(() => {
+    const rv = this.rv();
+    return [rv?.['Building'], rv?.['Floor'], rv?.['RoomOrArea']].filter(Boolean).join(' · ') || '—';
+  });
+}
