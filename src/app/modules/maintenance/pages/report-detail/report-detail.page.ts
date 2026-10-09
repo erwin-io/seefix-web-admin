@@ -53,6 +53,8 @@ export class ReportDetailPage {
 
   readonly data = load(() => this.maintenance.report(this.id()));
   readonly categories = signal<CategoryRef[]>([]);
+  /** Set when GET /api/reference/categories is unavailable (requires seefix-api web-admin support). */
+  readonly categoriesError = signal<string | null>(null);
   readonly busy = signal(false);
   readonly urgencies = URGENCIES;
   readonly draftFields = DRAFT_FIELDS;
@@ -102,7 +104,7 @@ export class ReportDetailPage {
     });
     firstValueFrom(this.maintenance.categories()).then(
       (r) => this.categories.set(r.items),
-      () => undefined,
+      () => this.categoriesError.set('Category list unavailable; only the AI category can be kept.'),
     );
   }
 

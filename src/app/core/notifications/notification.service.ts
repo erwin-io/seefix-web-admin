@@ -10,7 +10,8 @@ import { Notification, RealtimeConfig } from './notification.model';
 /**
  * In-app inbox shared by the top-bar bell and the Notifications page.
  * Pusher (private per-user channel) only signals "refetch"; the API list stays
- * the source of truth. Falls back to polling.
+ * the source of truth. Polling is always armed and only skips while Pusher is
+ * actually connected, so a failed connect, auth error or drop falls back to it.
  */
 @Injectable({ providedIn: 'root' })
 export class NotificationService {
@@ -30,9 +31,11 @@ export class NotificationService {
 
   async start(): Promise<void> {
     this.stop();
+    this.poll = setInterval(() => {
+      if (!this.live()) void this.load();
+    }, environment.pollMs);
     await this.load();
-    if (environment.realtime && (await this.connect())) return;
-    this.poll = setInterval(() => void this.load(), environment.pollMs);
+    if (environment.realtime) await this.connect();
   }
 
   async load(): Promise<void> {
@@ -58,10 +61,11 @@ export class NotificationService {
     this.items.update((list) => list.map((x) => ({ ...x, isRead: true })));
   }
 
-  private async connect(): Promise<boolean> {
+  /** Best-effort; any failure simply leaves polling in charge. */
+  private async connect(): Promise<void> {
     try {
       const cfg = await firstValueFrom(this.api.get<RealtimeConfig>('/api/realtime/config'));
-      if (!cfg.enabled || !cfg.key || !cfg.cluster) return false;
+      if (!cfg.enabled || !cfg.key || !cfg.cluster) return;
       const { default: PusherJs } = await import('pusher-js');
       const pusher = new PusherJs(cfg.key, {
         cluster: cfg.cluster,
@@ -71,13 +75,22 @@ export class NotificationService {
           headersProvider: () => ({ Authorization: `Bearer ${this.session.token() ?? ''}` }),
         },
       });
-      pusher.subscribe(cfg.userChannel).bind('notification.created', () => void this.load());
-      pusher.connection.bind('state_change', ({ current }: { current: string }) => this.live.set(current === 'connected'));
+      const channel = pusher.subscribe(cfg.userChannel);
+      channel.bind('notification.created', () => void this.load());
+      // Live only once the private channel is authorized; auth failure or a drop hands back to polling.
+      channel.bind('pusher:subscription_succeeded', () => this.setLive(pusher.connection.state === 'connected'));
+      channel.bind('pusher:subscription_error', () => this.live.set(false));
+      pusher.connection.bind('state_change', ({ current }: { current: string }) => this.setLive(current === 'connected' && channel.subscribed));
       this.pusher = pusher;
-      return true;
     } catch {
-      return false;
+      this.live.set(false);
     }
+  }
+
+  /** Re-read on every (re)connect to catch events missed while offline. */
+  private setLive(live: boolean): void {
+    if (live && !this.live()) void this.load();
+    this.live.set(live);
   }
 
   private stop(): void {

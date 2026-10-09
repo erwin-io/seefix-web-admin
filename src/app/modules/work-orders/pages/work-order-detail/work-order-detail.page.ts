@@ -41,6 +41,8 @@ export class WorkOrderDetailPage implements OnDestroy {
   readonly data = load(() => this.workOrders.get(this.id()));
   readonly completion = load(() => this.workOrders.completionStatus(this.id()));
   readonly assignees = signal<AssignableUser[]>([]);
+  /** Set when GET /api/work-orders/assignable-users is unavailable (requires seefix-api web-admin support). */
+  readonly assigneesError = signal<string | null>(null);
   readonly busy = signal(false);
   readonly files = signal<{ file: File; url: string }[]>([]);
 
@@ -97,7 +99,7 @@ export class WorkOrderDetailPage implements OnDestroy {
     if (this.isStaff()) {
       firstValueFrom(this.workOrders.assignableUsers()).then(
         (r) => this.assignees.set(r.items),
-        () => undefined,
+        () => this.assigneesError.set('User list unavailable: enter the lead name. Workers will not see this work order until a lead user is set.'),
       );
     }
   }

@@ -81,17 +81,17 @@ aliases. Adding a module means adding a folder plus one `loadChildren` line in `
 | File | Purpose |
 |---|---|
 | `src/environments/environment.development.ts` | `apiBaseUrl: ''` (same origin, proxied) |
-| `src/environments/environment.ts` | production: set `apiBaseUrl` to the approved **HTTPS** API origin |
+| `src/environments/environment.ts` | production: `apiBaseUrl: ''` = same-origin `/api` behind the deployment's TLS reverse proxy |
 | `proxy.conf.json` | dev proxy target |
 
-For a production deploy on another origin, add that origin to the API's `CORS_ORIGINS`.
+If the API must live on another origin, set `apiBaseUrl` to that HTTPS origin at deploy time and add the web admin's origin to the API's `CORS_ORIGINS`.
 
 ### Realtime (Pusher)
 
 The API exposes `GET /api/realtime/config` (public key + cluster only) and `POST /api/realtime/auth`
 (signs **only** the caller's `private-user-{id}` channel). The API publishes `notification.created` after the
 database transaction commits. The client treats the event as "refetch the inbox"; the API list stays the source of truth.
-If Pusher is not configured (`PUSHER_*` empty in the API `.env`) or the connection fails, the app polls every 60 s.
+Polling (every 60 s) is always armed and only pauses while the private channel is actually subscribed and connected. A failed config, channel-auth error or disconnect therefore falls back to polling, and every reconnect re-reads the inbox.
 
 ## What each role can do
 
@@ -110,7 +110,11 @@ If Pusher is not configured (`PUSHER_*` empty in the API `.env`) or the connecti
 Client guards only hide what a role can't use. **Server RBAC is authoritative**, and every mutation re-reads
 the record afterwards, so a 409 shows the server's current state.
 
-## Backend changes this app depends on (`seefix-api` branch `feat/web-admin-support`)
+## Backend-gated features (`seefix-api` PR erwin-io/seefix-api#2, branch `feat/web-admin-support`)
+
+Until that PR is deployed, the affected UI degrades with a visible message instead of failing: no user picker when
+dispatching (enter a lead name; Workers won't see the work order), the AI category is the only option on review,
+and notifications use polling.
 
 - `GET /api/work-orders/assignable-users`: staff pick a responsible lead (`/api/admin/users` is Admin-only).
 - `GET /api/reference/categories`: active categories for review overrides.

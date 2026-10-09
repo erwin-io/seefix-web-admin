@@ -210,7 +210,11 @@
                   <mat-option [value]="u.id">{{ u.fullName }} · {{ u.role | humanize }}{{ u.departmentOrTrade ? ' · ' + u.departmentOrTrade : '' }}</mat-option>
                 }
               </mat-select>
-              <mat-hint>Workers only see work orders where they are the lead user.</mat-hint>
+              @if (assigneesError()) {
+                <mat-hint class="warn-hint">{{ assigneesError() }}</mat-hint>
+              } @else {
+                <mat-hint>Workers only see work orders where they are the lead user.</mat-hint>
+              }
             </mat-form-field>
             <mat-form-field class="full"><mat-label>Lead name</mat-label><input matInput formControlName="responsibleLeadName" /></mat-form-field>
             <mat-form-field class="full"><mat-label>Lead contact</mat-label><input matInput formControlName="responsibleLeadContact" /></mat-form-field>

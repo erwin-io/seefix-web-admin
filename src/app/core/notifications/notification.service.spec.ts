@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { environment } from '@env/environment';
 import { of, throwError } from 'rxjs';
 import { load } from '../utils/load';
 import { NotificationService } from './notification.service';
@@ -32,6 +33,45 @@ describe('NotificationService', () => {
   it('does not call the API for an already-read item', async () => {
     await inbox.markRead(n('x', true));
     http.expectNone('/api/notifications/x/read');
+  });
+
+  describe('polling fallback', () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    async function startWithRealtime(enabled: boolean) {
+      const p = inbox.start();
+      http.expectOne('/api/notifications').flush({ items: [] });
+      await vi.advanceTimersByTimeAsync(0);
+      http.expectOne('/api/realtime/config').flush({ enabled, key: null, cluster: null, userChannel: 'private-user-u' });
+      await p;
+    }
+
+    it('keeps polling when realtime is unavailable', async () => {
+      await startWithRealtime(false);
+      await vi.advanceTimersByTimeAsync(environment.pollMs);
+      http.expectOne('/api/notifications').flush({ items: [] });
+    });
+
+    it('keeps polling when the realtime config request fails', async () => {
+      const p = inbox.start();
+      http.expectOne('/api/notifications').flush({ items: [] });
+      await vi.advanceTimersByTimeAsync(0);
+      http.expectOne('/api/realtime/config').flush(null, { status: 503, statusText: 'x' });
+      await p;
+      await vi.advanceTimersByTimeAsync(environment.pollMs);
+      http.expectOne('/api/notifications').flush({ items: [] });
+    });
+
+    it('skips polling only while realtime is actually connected', async () => {
+      await startWithRealtime(false);
+      inbox.live.set(true);
+      await vi.advanceTimersByTimeAsync(environment.pollMs);
+      http.expectNone('/api/notifications');
+      inbox.live.set(false);
+      await vi.advanceTimersByTimeAsync(environment.pollMs);
+      http.expectOne('/api/notifications').flush({ items: [] });
+    });
   });
 
   it('marks all read', async () => {
