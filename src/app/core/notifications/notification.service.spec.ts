@@ -64,6 +64,26 @@ describe('NotificationService', () => {
       http.expectOne('/api/notifications').flush({ items: [] });
     });
 
+    it('API contract: enabled:false keeps polling and never opens a socket, even if key/cluster are present', async () => {
+      const saved = environment.realtime;
+      environment.realtime = true;
+      onTestFinished(() => void (environment.realtime = saved));
+      const seam = inbox as unknown as { createPusher: () => Promise<unknown> };
+      const create = vi.spyOn(seam, 'createPusher');
+      const p = inbox.start();
+      http.expectOne('/api/notifications').flush({ items: [] });
+      await vi.advanceTimersByTimeAsync(0);
+      // e.g. PUSHER_* set on the API but REALTIME_CLIENTS_ENABLED=off (no confirmed publisher)
+      http.expectOne('/api/realtime/config').flush({ enabled: false, key: 'pk', cluster: 'ap1', userChannel: 'private-user-u' });
+      await p;
+      expect(create).not.toHaveBeenCalled();
+      expect(inbox.live()).toBe(false);
+      for (let i = 0; i < 3; i += 1) {
+        await vi.advanceTimersByTimeAsync(environment.pollMs);
+        http.expectOne('/api/notifications').flush({ items: [] });
+      }
+    });
+
     it('skips polling only while realtime is actually connected', async () => {
       await startWithRealtime(false);
       inbox.live.set(true);
