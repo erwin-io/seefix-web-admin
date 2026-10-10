@@ -20,6 +20,8 @@ export class NotificationService {
   private readonly session = inject(SessionService);
   private pusher: Pusher | null = null;
   private poll: ReturnType<typeof setInterval> | null = null;
+  /** Bumped by stop(): async work started under an older run must not touch state (issue #10). */
+  private run = 0;
 
   readonly items = signal<Notification[]>([]);
   readonly loading = signal(false);
@@ -35,15 +37,17 @@ export class NotificationService {
     this.poll = setInterval(() => {
       if (!this.live()) void this.load();
     }, environment.pollMs);
+    const run = this.run;
     await this.load();
-    if (environment.realtime) await this.connect();
+    if (environment.realtime && run === this.run) await this.connect(run);
   }
 
   async load(): Promise<void> {
+    const run = this.run;
     this.loading.set(true);
     try {
       const { items } = await firstValueFrom(this.api.get<Items<Notification>>('/api/notifications'));
-      this.items.set(items);
+      if (run === this.run) this.items.set(items);
     } catch {
       // Bell keeps the last known list; the inbox page shows its own error state.
     } finally {
@@ -63,10 +67,10 @@ export class NotificationService {
   }
 
   /** Best-effort; any failure simply leaves polling in charge. */
-  private async connect(): Promise<void> {
+  private async connect(run: number): Promise<void> {
     try {
       const cfg = await firstValueFrom(this.api.get<RealtimeConfig>('/api/realtime/config'));
-      if (!cfg.enabled || !cfg.key || !cfg.cluster) return;
+      if (run !== this.run || !cfg.enabled || !cfg.key || !cfg.cluster) return;
       const pusher = await this.createPusher(cfg.key, {
         cluster: cfg.cluster,
         channelAuthorization: {
@@ -75,6 +79,7 @@ export class NotificationService {
           headersProvider: () => ({ Authorization: `Bearer ${this.session.token() ?? ''}` }),
         },
       });
+      if (run !== this.run) return pusher.disconnect(); // logged out while pusher-js loaded
       const channel = pusher.subscribe(cfg.userChannel);
       channel.bind('notification.created', () => void this.load());
       // Live only once the private channel is authorized; auth failure or a drop hands back to polling.
@@ -83,7 +88,7 @@ export class NotificationService {
       pusher.connection.bind('state_change', ({ current }: { current: string }) => this.setLive(current === 'connected' && channel.subscribed));
       this.pusher = pusher;
     } catch {
-      this.live.set(false);
+      if (run === this.run) this.live.set(false);
     }
   }
 
@@ -100,6 +105,7 @@ export class NotificationService {
   }
 
   private stop(): void {
+    this.run += 1;
     this.pusher?.disconnect();
     this.pusher = null;
     this.live.set(false);

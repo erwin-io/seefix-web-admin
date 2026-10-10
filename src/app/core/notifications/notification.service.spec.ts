@@ -14,7 +14,7 @@ describe('NotificationService', () => {
   const n = (id: string, isRead = false) => ({ id, isRead, title: id }) as never;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] });
+    TestBed.configureTestingModule({ providers: [provideRouter([{ path: 'login', children: [] }]), provideHttpClient(), provideHttpClientTesting()] });
     inbox = TestBed.inject(NotificationService);
     http = TestBed.inject(HttpTestingController);
   });
@@ -169,6 +169,99 @@ describe('NotificationService', () => {
       TestBed.inject(SessionService).end();
       expect(fake.disconnected).toBe(true);
       expect(inbox.live()).toBe(false);
+      expect(inbox.items()).toEqual([]);
+    });
+  });
+
+  describe('session isolation (issue #10)', () => {
+    const session = () => TestBed.inject(SessionService);
+    const fakes: { disconnected: boolean; subscribed: string[] }[] = [];
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      const saved = environment.realtime;
+      environment.realtime = true;
+      onTestFinished(() => void (environment.realtime = saved));
+      fakes.length = 0;
+      const seam = inbox as unknown as { createPusher: () => Promise<unknown> };
+      vi.spyOn(seam, 'createPusher').mockImplementation(async () => {
+        const fake = {
+          disconnected: false,
+          subscribed: [] as string[],
+          connection: { state: 'connecting', bind: () => undefined },
+          subscribe: (name: string) => (fake.subscribed.push(name), { subscribed: false, bind: () => undefined }),
+          disconnect: () => void (fake.disconnected = true),
+        };
+        fakes.push(fake);
+        return fake;
+      });
+      session().token.set('tok-A');
+    });
+    afterEach(() => vi.useRealTimers());
+
+    it("drops user A's list response that resolves after logout", async () => {
+      const p = inbox.start();
+      const pendingA = http.expectOne('/api/notifications'); // A's request still in flight
+      session().end();
+      pendingA.flush({ items: [n('a-secret')] });
+      await vi.advanceTimersByTimeAsync(0);
+      await p;
+      expect(inbox.items()).toEqual([]);
+      http.expectNone('/api/realtime/config'); // the stale start does not continue to connect
+    });
+
+    it('creates no socket when logout happens during the realtime config request', async () => {
+      const p = inbox.start();
+      http.expectOne('/api/notifications').flush({ items: [] });
+      await vi.advanceTimersByTimeAsync(0);
+      const cfg = http.expectOne('/api/realtime/config');
+      session().end();
+      cfg.flush({ enabled: true, key: 'k', cluster: 'ap1', userChannel: 'private-user-A' });
+      await p;
+      expect(fakes).toEqual([]);
+      expect(inbox.live()).toBe(false);
+    });
+
+    it('disconnects a socket whose creation finishes after logout', async () => {
+      let release!: () => void;
+      const gate = new Promise<void>((r) => (release = r));
+      const seam = inbox as unknown as { createPusher: () => Promise<unknown> };
+      const created = vi.mocked(seam.createPusher).getMockImplementation()!;
+      vi.mocked(seam.createPusher).mockImplementation(async () => (await gate, created()));
+      const p = inbox.start();
+      http.expectOne('/api/notifications').flush({ items: [] });
+      await vi.advanceTimersByTimeAsync(0);
+      http.expectOne('/api/realtime/config').flush({ enabled: true, key: 'k', cluster: 'ap1', userChannel: 'private-user-A' });
+      await vi.advanceTimersByTimeAsync(0);
+      session().end(); // logout while pusher-js is still loading
+      release();
+      await p;
+      expect(fakes.length).toBe(1);
+      expect(fakes[0].disconnected).toBe(true);
+      expect(fakes[0].subscribed).toEqual([]);
+    });
+
+    it('only the latest start may update the inbox (rapid stop/start, out-of-order responses)', async () => {
+      const first = inbox.start(); // user A
+      const reqA = http.expectOne('/api/notifications');
+      session().token.set('tok-B');
+      const second = inbox.start(); // user B (start() resets the previous run)
+      const reqB = http.expectOne('/api/notifications');
+      reqB.flush({ items: [n('b1')] });
+      reqA.flush({ items: [n('a1'), n('a2')] }); // A's response arrives last
+      await vi.advanceTimersByTimeAsync(0);
+      http.match('/api/realtime/config').forEach((r) => r.flush({ enabled: false, key: null, cluster: null, userChannel: '' }));
+      await Promise.all([first, second]);
+      expect(inbox.items().map((x) => x.id)).toEqual(['b1']);
+    });
+
+    it('ignores a markRead response that resolves after logout', async () => {
+      inbox.items.set([n('a')]);
+      const p = inbox.markRead(inbox.items()[0]);
+      const req = http.expectOne('/api/notifications/a/read');
+      session().end();
+      req.flush({ id: 'a', isRead: true });
+      await p;
       expect(inbox.items()).toEqual([]);
     });
   });
