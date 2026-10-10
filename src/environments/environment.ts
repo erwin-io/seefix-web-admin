@@ -12,4 +12,6 @@ export const environment = {
   /** Realtime is only attempted when the API reports it is configured. */
   realtime: true,
   pollMs: 60000,
+  /** REST re-read while Pusher is live, in case the publisher stops but the socket stays up (#11). */
+  reconcileMs: 300000,
 };

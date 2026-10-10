@@ -11,8 +11,10 @@ import { Notification, RealtimeConfig } from './notification.model';
 /**
  * In-app inbox shared by the top-bar bell and the Notifications page.
  * Pusher (private per-user channel) only signals "refetch"; the API list stays
- * the source of truth. Polling is always armed and only skips while Pusher is
- * actually connected, so a failed connect, auth error or drop falls back to it.
+ * the source of truth. One timer re-reads REST every pollMs while not live, and
+ * every reconcileMs while live: a connected socket does not prove the API is
+ * still publishing (#11). Tradeoff: at most one extra list GET per user per
+ * reconcileMs while live; reads never overlap.
  */
 @Injectable({ providedIn: 'root' })
 export class NotificationService {
@@ -22,6 +24,7 @@ export class NotificationService {
   private poll: ReturnType<typeof setInterval> | null = null;
   /** Bumped by stop(): async work started under an older run must not touch state (issue #10). */
   private run = 0;
+  private lastRead = 0;
 
   readonly items = signal<Notification[]>([]);
   readonly loading = signal(false);
@@ -34,9 +37,7 @@ export class NotificationService {
 
   async start(): Promise<void> {
     this.stop();
-    this.poll = setInterval(() => {
-      if (!this.live()) void this.load();
-    }, environment.pollMs);
+    this.poll = setInterval(() => this.tick(), environment.pollMs);
     const run = this.run;
     await this.load();
     if (environment.realtime && run === this.run) await this.connect(run);
@@ -44,6 +45,7 @@ export class NotificationService {
 
   async load(): Promise<void> {
     const run = this.run;
+    this.lastRead = Date.now();
     this.loading.set(true);
     try {
       const { items } = await firstValueFrom(this.api.get<Items<Notification>>('/api/notifications'));
@@ -92,6 +94,16 @@ export class NotificationService {
     } catch {
       if (run === this.run) this.live.set(false);
     }
+  }
+
+  /**
+   * Timer read: due after pollMs (not live) or reconcileMs (live); half a poll of slack absorbs timer jitter.
+   * No overlap: lastRead is stamped when a read starts and requests time out (requestTimeoutMs) before
+   * half a poll elapses, so a read is never due while another is in flight (asserted in the spec).
+   */
+  private tick(): void {
+    const due = this.live() ? environment.reconcileMs : environment.pollMs;
+    if (Date.now() - this.lastRead >= due - environment.pollMs / 2) void this.load();
   }
 
   /** Test seam: the spec swaps in a fake client to drive the connection lifecycle. */

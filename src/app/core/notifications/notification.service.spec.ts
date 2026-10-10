@@ -182,6 +182,61 @@ describe('NotificationService', () => {
       http.expectNone('/api/notifications');
     });
 
+    describe('REST reconciliation while live (issue #11)', () => {
+      const goLive = () => {
+        fake.connected();
+        fake.authorized();
+        list(); // catch-up read on going live
+      };
+
+      it('re-reads REST at the reconcile interval while the socket stays connected but no events arrive', async () => {
+        goLive();
+        // Publisher died; socket stays connected/subscribed, no notification.created arrives.
+        await vi.advanceTimersByTimeAsync(environment.reconcileMs - environment.pollMs);
+        http.expectNone('/api/notifications'); // no fast polling while live
+        await vi.advanceTimersByTimeAsync(environment.pollMs);
+        http.expectOne('/api/notifications').flush({ items: [n('server-new')] });
+        await vi.advanceTimersByTimeAsync(0);
+        expect(inbox.live()).toBe(true);
+        expect(inbox.items().map((x) => x.id)).toEqual(['server-new']);
+        await vi.advanceTimersByTimeAsync(environment.reconcileMs);
+        list(); // and again one interval later
+      });
+
+      it('a live event refetches promptly and resets the reconcile clock', async () => {
+        goLive();
+        await vi.advanceTimersByTimeAsync(environment.reconcileMs - environment.pollMs);
+        fake.emit('ch:notification.created', { notificationId: 'n1' });
+        list();
+        await vi.advanceTimersByTimeAsync(environment.pollMs * 2);
+        http.expectNone('/api/notifications'); // fresh read just happened
+      });
+
+      it('no-overlap invariant: a request times out before the next timer read can fall due', () => {
+        expect(environment.requestTimeoutMs).toBeLessThan(environment.pollMs / 2);
+      });
+
+      it('never overlaps: a timer tick is skipped while a read is in flight', async () => {
+        goLive();
+        await vi.advanceTimersByTimeAsync(environment.pollMs - 5000);
+        fake.emit('ch:notification.created', { notificationId: 'n1' }); // event read, still pending
+        const pending = http.expectOne('/api/notifications');
+        fake.dropped(); // offline: the next tick would poll, but a read is in flight
+        await vi.advanceTimersByTimeAsync(5000);
+        http.expectNone('/api/notifications');
+        pending.flush({ items: [] });
+        await vi.advanceTimersByTimeAsync(environment.pollMs);
+        list(); // fast polling resumes once the read settles
+      });
+
+      it('logout cancels reconciliation', async () => {
+        goLive();
+        TestBed.inject(SessionService).end();
+        await vi.advanceTimersByTimeAsync(environment.reconcileMs * 2);
+        http.expectNone('/api/notifications');
+      });
+    });
+
     it('disconnects and clears the inbox when the session ends', () => {
       fake.connected();
       fake.authorized();
