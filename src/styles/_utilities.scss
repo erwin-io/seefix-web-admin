@@ -14,3 +14,8 @@
 .tone-info { background: #e8efff; color: var(--sf-info); }
 .tone-violet { background: #f1ebff; color: var(--sf-violet); }
 .tone-muted { background: #eef1f5; color: var(--sf-muted); }
+
+// Form hint when an optional backend capability is unavailable.
+.warn-hint {
+  color: var(--sf-warn);
+}

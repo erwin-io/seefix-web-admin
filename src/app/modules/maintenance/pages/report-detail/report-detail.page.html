@@ -101,8 +101,13 @@
                   <mat-select formControlName="finalCategory">
                     @for (c of categories(); track c.code) {
                       <mat-option [value]="c.name">{{ c.name }}</mat-option>
+                    } @empty {
+                      <mat-option [value]="form.value.finalCategory">{{ form.value.finalCategory || '—' }}</mat-option>
                     }
                   </mat-select>
+                  @if (categoriesError()) {
+                    <mat-hint class="warn-hint">{{ categoriesError() }}</mat-hint>
+                  }
                 </mat-form-field>
                 <mat-form-field>
                   <mat-label>Final urgency</mat-label>
