@@ -51,7 +51,7 @@ export class NotificationService {
     } catch {
       // Bell keeps the last known list; the inbox page shows its own error state.
     } finally {
-      this.loading.set(false);
+      if (run === this.run) this.loading.set(false);
     }
   }
 
@@ -81,11 +81,13 @@ export class NotificationService {
       });
       if (run !== this.run) return pusher.disconnect(); // logged out while pusher-js loaded
       const channel = pusher.subscribe(cfg.userChannel);
-      channel.bind('notification.created', () => void this.load());
+      // Callbacks already queued when this run ended must not touch the next session's state.
+      const ifCurrent = <T>(fn: (arg: T) => void) => (arg: T) => run === this.run && fn(arg);
+      channel.bind('notification.created', ifCurrent(() => void this.load()));
       // Live only once the private channel is authorized; auth failure or a drop hands back to polling.
-      channel.bind('pusher:subscription_succeeded', () => this.setLive(pusher.connection.state === 'connected'));
-      channel.bind('pusher:subscription_error', () => this.live.set(false));
-      pusher.connection.bind('state_change', ({ current }: { current: string }) => this.setLive(current === 'connected' && channel.subscribed));
+      channel.bind('pusher:subscription_succeeded', ifCurrent(() => this.setLive(pusher.connection.state === 'connected')));
+      channel.bind('pusher:subscription_error', ifCurrent(() => this.live.set(false)));
+      pusher.connection.bind('state_change', ifCurrent(({ current }: { current: string }) => this.setLive(current === 'connected' && channel.subscribed)));
       this.pusher = pusher;
     } catch {
       if (run === this.run) this.live.set(false);
@@ -109,6 +111,7 @@ export class NotificationService {
     this.pusher?.disconnect();
     this.pusher = null;
     this.live.set(false);
+    this.loading.set(false);
     if (this.poll) clearInterval(this.poll);
     this.poll = null;
     this.items.set([]);

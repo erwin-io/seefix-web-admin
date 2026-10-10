@@ -175,7 +175,8 @@ describe('NotificationService', () => {
 
   describe('session isolation (issue #10)', () => {
     const session = () => TestBed.inject(SessionService);
-    const fakes: { disconnected: boolean; subscribed: string[] }[] = [];
+    type Handler = (data?: unknown) => void;
+    const fakes: { disconnected: boolean; subscribed: string[]; handlers: Map<string, Handler>; connection: { state: string } }[] = [];
 
     beforeEach(() => {
       vi.useFakeTimers();
@@ -185,11 +186,13 @@ describe('NotificationService', () => {
       fakes.length = 0;
       const seam = inbox as unknown as { createPusher: () => Promise<unknown> };
       vi.spyOn(seam, 'createPusher').mockImplementation(async () => {
+        const handlers = new Map<string, Handler>();
         const fake = {
           disconnected: false,
           subscribed: [] as string[],
-          connection: { state: 'connecting', bind: () => undefined },
-          subscribe: (name: string) => (fake.subscribed.push(name), { subscribed: false, bind: () => undefined }),
+          handlers,
+          connection: { state: 'connecting', bind: (e: string, cb: Handler) => void handlers.set(`conn:${e}`, cb) },
+          subscribe: (name: string) => (fake.subscribed.push(name), { subscribed: true, bind: (e: string, cb: Handler) => void handlers.set(`ch:${e}`, cb) }),
           disconnect: () => void (fake.disconnected = true),
         };
         fakes.push(fake);
@@ -252,6 +255,54 @@ describe('NotificationService', () => {
       await vi.advanceTimersByTimeAsync(0);
       http.match('/api/realtime/config').forEach((r) => r.flush({ enabled: false, key: null, cluster: null, userChannel: '' }));
       await Promise.all([first, second]);
+      expect(inbox.items().map((x) => x.id)).toEqual(['b1']);
+    });
+
+    it("ignores user A's already-queued Pusher callbacks after logout and B's start", async () => {
+      const startA = inbox.start();
+      http.expectOne('/api/notifications').flush({ items: [n('a1')] });
+      await vi.advanceTimersByTimeAsync(0);
+      http.expectOne('/api/realtime/config').flush({ enabled: true, key: 'k', cluster: 'ap1', userChannel: 'private-user-A' });
+      await startA;
+      const a = fakes[0];
+      session().end();
+      session().token.set('tok-B');
+      const startB = inbox.start(); // B: realtime off, so B relies on polling
+      http.expectOne('/api/notifications').flush({ items: [n('b1')] });
+      await vi.advanceTimersByTimeAsync(0);
+      http.expectOne('/api/realtime/config').flush({ enabled: false, key: null, cluster: null, userChannel: '' });
+      await startB;
+
+      // A's callbacks that were already queued when A logged out now fire.
+      a.connection.state = 'connected';
+      a.handlers.get('ch:pusher:subscription_succeeded')!();
+      a.handlers.get('conn:state_change')!({ current: 'connected' });
+      a.handlers.get('ch:notification.created')!({ notificationId: 'x' });
+      a.handlers.get('ch:pusher:subscription_error')!({ status: 403 });
+
+      expect(inbox.live()).toBe(false); // B's polling is not suppressed
+      http.expectNone('/api/notifications'); // no refetch triggered by A
+      expect(inbox.items().map((x) => x.id)).toEqual(['b1']);
+      await vi.advanceTimersByTimeAsync(environment.pollMs);
+      http.expectOne('/api/notifications').flush({ items: [n('b1')] }); // B still polls
+    });
+
+    it("an old run's response does not clear the new run's loading state", async () => {
+      const startA = inbox.start();
+      const reqA = http.expectOne('/api/notifications');
+      session().end();
+      expect(inbox.loading()).toBe(false); // logout resets the indicator
+      session().token.set('tok-B');
+      const startB = inbox.start();
+      const reqB = http.expectOne('/api/notifications');
+      reqA.flush({ items: [n('a1')] });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(inbox.loading()).toBe(true); // B's request is still pending
+      reqB.flush({ items: [n('b1')] });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(inbox.loading()).toBe(false);
+      http.match('/api/realtime/config').forEach((r) => r.flush({ enabled: false, key: null, cluster: null, userChannel: '' }));
+      await Promise.all([startA, startB]);
       expect(inbox.items().map((x) => x.id)).toEqual(['b1']);
     });
 
