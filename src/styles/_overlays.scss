@@ -47,3 +47,13 @@
   color: var(--sf-accent);
   border-top: 1px solid var(--sf-border);
 }
+
+// In-app photo viewer (shared ImagePreviewComponent): photo floats on a dark backdrop, no dialog card.
+.image-preview-panel {
+  --mat-dialog-container-color: transparent;
+  --mat-dialog-container-elevation-shadow: none;
+}
+
+.image-preview-backdrop {
+  background: rgba(0, 0, 0, 0.85);
+}

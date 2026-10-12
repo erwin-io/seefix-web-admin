@@ -3,6 +3,8 @@ import { Component, computed, inject, input, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
+import { provideNativeDateAdapter } from '@angular/material/core';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -21,9 +23,10 @@ import { ProcurementService } from '../../procurement.service';
 @Component({
   selector: 'app-handoff-detail-page',
   imports: [
-    DatePipe, RouterLink, ReactiveFormsModule, MatButtonModule, MatExpansionModule, MatFormFieldModule, MatIconModule,
+    DatePipe, RouterLink, ReactiveFormsModule, MatButtonModule, MatDatepickerModule, MatExpansionModule, MatFormFieldModule, MatIconModule,
     MatInputModule, MatSelectModule, ...SHARED_IMPORTS,
   ],
+  providers: [provideNativeDateAdapter()],
   templateUrl: './handoff-detail.page.html',
   styleUrl: './handoff-detail.page.scss',
 })
@@ -56,8 +59,9 @@ export class HandoffDetailPage {
     responsibleLeadContact: [''],
     responsibleLeadEmail: ['', Validators.email],
     procurementReferenceNo: [''],
-    plannedStartAt: [''],
-    plannedDeadlineAt: [''],
+    // Dates serialize as ISO instants (local midnight); the API columns are timestamptz.
+    plannedStartAt: [null as Date | null],
+    plannedDeadlineAt: [null as Date | null],
     agreedDurationDays: [null as number | null, Validators.min(0)],
     plannedCrewSize: [null as number | null, Validators.min(0)],
     referenceDocumentId: [''],

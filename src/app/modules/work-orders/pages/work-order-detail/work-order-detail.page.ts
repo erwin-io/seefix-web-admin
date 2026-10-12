@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatDialog } from '@angular/material/dialog';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -14,6 +15,7 @@ import { Observable, firstValueFrom } from 'rxjs';
 import { SessionService } from '@app/core/auth/session.service';
 import { MAINTENANCE, SUPERVISOR } from '@app/core/models/user.model';
 import { load } from '@app/core/utils/load';
+import { previewImages } from '@app/shared/components/image-preview/image-preview.component';
 import { humanize } from '@app/shared/pipes/humanize.pipe';
 import { UiService } from '@app/shared/services/ui.service';
 import { SHARED_IMPORTS } from '@app/shared/shared.imports';
@@ -34,6 +36,7 @@ const { maxFiles: MAX_FILES, maxBytes: MAX_BYTES, types: IMAGE_TYPES } = COMPLET
 export class WorkOrderDetailPage implements OnDestroy {
   private readonly workOrders = inject(WorkOrdersService);
   private readonly ui = inject(UiService);
+  private readonly dialog = inject(MatDialog);
   private readonly fb = inject(FormBuilder);
   readonly session = inject(SessionService);
   readonly id = input.required<string>();
@@ -199,6 +202,10 @@ export class WorkOrderDetailPage implements OnDestroy {
       this.ui.toast(`Up to ${MAX_FILES} photos.`);
     }
     this.files.set(next.slice(0, MAX_FILES));
+  }
+
+  previewFile(i: number): void {
+    previewImages(this.dialog, this.files().map((f) => f.url), i);
   }
 
   removeFile(i: number): void {

@@ -69,7 +69,7 @@
                 <div class="previews">
                   @for (f of files(); track f.url; let i = $index) {
                     <figure>
-                      <img [src]="f.url" [alt]="f.file.name" />
+                      <button type="button" class="open" (click)="previewFile(i)" [attr.aria-label]="'View ' + f.file.name"><img [src]="f.url" alt="" /></button>
                       <button mat-mini-fab type="button" (click)="removeFile(i)" aria-label="Remove photo"><mat-icon>close</mat-icon></button>
                     </figure>
                   }
@@ -164,7 +164,7 @@
       </section>
     </div>
 
-    <aside>
+    <aside class="side-stack">
       <section class="card props">
         <h2>Properties</h2>
         <dl>
@@ -202,7 +202,8 @@
           </header>
           <form [formGroup]="assignForm" (ngSubmit)="assign()">
             <mat-form-field class="full"><mat-label>Assigned party</mat-label><input matInput formControlName="assignedPartyName" placeholder="e.g. SEEFIX Electrical Team" /></mat-form-field>
-            <mat-form-field class="full">
+            <!-- dynamic: the hint wraps to two lines in the narrow side column -->
+            <mat-form-field class="full" subscriptSizing="dynamic">
               <mat-label>Responsible lead (user)</mat-label>
               <mat-select formControlName="responsibleLeadUserId" (selectionChange)="pickLead($event.value)">
                 <mat-option value="">— External / name only —</mat-option>
