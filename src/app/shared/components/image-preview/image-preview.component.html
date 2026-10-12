@@ -1,0 +1,9 @@
+<div class="viewer">
+  <img [src]="src()" [alt]="'Photo ' + (index() + 1) + ' of ' + data.urls.length" />
+  <button mat-icon-button class="close" mat-dialog-close aria-label="Close preview"><mat-icon>close</mat-icon></button>
+  @if (data.urls.length > 1) {
+    <button mat-icon-button class="nav prev" (click)="step(-1)" aria-label="Previous photo"><mat-icon>chevron_left</mat-icon></button>
+    <button mat-icon-button class="nav next" (click)="step(1)" aria-label="Next photo"><mat-icon>chevron_right</mat-icon></button>
+    <span class="count">{{ index() + 1 }} / {{ data.urls.length }}</span>
+  }
+</div>

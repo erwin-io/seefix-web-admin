@@ -29,6 +29,25 @@
   }
 }
 
+// Side column with several cards: stick the column as one unit (scrolling inside if taller than the
+// viewport) so later cards can't slide over a sticky Properties card.
+.side-stack {
+  position: sticky;
+  top: 76px;
+  max-height: calc(100vh - 92px);
+  overflow-y: auto;
+
+  > .props {
+    position: static;
+  }
+
+  @media (max-width: 1100px) {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
 .props {
   position: sticky;
   top: 76px;

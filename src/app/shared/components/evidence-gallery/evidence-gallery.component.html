@@ -1,7 +1,9 @@
 @if (urls().length) {
   <div class="gallery">
-    @for (src of urls(); track src) {
-      <a [href]="src" target="_blank" rel="noopener" class="thumb"><img [src]="src" alt="Evidence photo" loading="lazy" /></a>
+    @for (src of urls(); track src; let i = $index) {
+      <button type="button" class="thumb" (click)="open(i)" [attr.aria-label]="'View photo ' + (i + 1) + ' of ' + urls().length">
+        <img [src]="src" alt="" loading="lazy" />
+      </button>
     }
   </div>
 } @else {

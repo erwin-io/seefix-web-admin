@@ -69,7 +69,7 @@
         @if (isActor()) {
           <form [formGroup]="docForm" (ngSubmit)="upload(picker)" class="form-grid" style="margin-top: 12px">
             <input #picker type="file" hidden (change)="pickFile(picker)" />
-            <div class="span-all">
+            <div class="span-all file-row">
               <button mat-stroked-button type="button" (click)="picker.click()"><mat-icon>attach_file</mat-icon>Choose file</button>
               <span class="muted"> {{ file()?.name ?? 'No file chosen (max 10 MB)' }}</span>
             </div>
@@ -129,8 +129,21 @@
               <mat-form-field><mat-label>Lead contact</mat-label><input matInput formControlName="responsibleLeadContact" /></mat-form-field>
               <mat-form-field><mat-label>Lead email</mat-label><input matInput formControlName="responsibleLeadEmail" /></mat-form-field>
               <mat-form-field><mat-label>Procurement reference no.</mat-label><input matInput formControlName="procurementReferenceNo" /></mat-form-field>
-              <mat-form-field><mat-label>Planned start</mat-label><input matInput type="date" formControlName="plannedStartAt" /></mat-form-field>
-              <mat-form-field><mat-label>Planned deadline</mat-label><input matInput type="date" formControlName="plannedDeadlineAt" /></mat-form-field>
+              <mat-form-field>
+                <mat-label>Planned start</mat-label>
+                <input matInput [matDatepicker]="startPicker" formControlName="plannedStartAt" />
+                <mat-datepicker-toggle matIconSuffix [for]="startPicker" />
+                <mat-datepicker #startPicker />
+              </mat-form-field>
+              <mat-form-field>
+                <mat-label>Planned deadline</mat-label>
+                <input matInput [matDatepicker]="deadlinePicker" [min]="outcomeForm.controls.plannedStartAt.value" formControlName="plannedDeadlineAt" />
+                <mat-datepicker-toggle matIconSuffix [for]="deadlinePicker" />
+                <mat-datepicker #deadlinePicker />
+                @if (outcomeForm.controls.plannedDeadlineAt.hasError('matDatepickerMin')) {
+                  <mat-error>Deadline can't be before the planned start.</mat-error>
+                }
+              </mat-form-field>
               <mat-form-field><mat-label>Agreed duration (days)</mat-label><input matInput type="number" formControlName="agreedDurationDays" /></mat-form-field>
               <mat-form-field><mat-label>Planned crew size</mat-label><input matInput type="number" formControlName="plannedCrewSize" /></mat-form-field>
               <mat-form-field>
@@ -175,9 +188,9 @@
             <button mat-flat-button (click)="acknowledge()" [disabled]="busy()"><mat-icon>done</mat-icon>Acknowledge</button>
           }
           @if (['SUBMITTED', 'ACKNOWLEDGED', 'IN_PROCESS'].includes(status() ?? '')) {
-            <form [formGroup]="startForm" (ngSubmit)="start()">
+            <form [formGroup]="startForm" (ngSubmit)="start()" class="start-form">
               <mat-form-field class="full" subscriptSizing="dynamic"><mat-label>External system ref.</mat-label><input matInput formControlName="externalSystemReference" /></mat-form-field>
-              <mat-form-field class="full"><mat-label>External system URL</mat-label><input matInput formControlName="externalSystemUrl" /></mat-form-field>
+              <mat-form-field class="full" subscriptSizing="dynamic"><mat-label>External system URL</mat-label><input matInput formControlName="externalSystemUrl" /></mat-form-field>
               <button mat-stroked-button class="full" type="submit" [disabled]="busy()">
                 {{ status() === 'IN_PROCESS' ? 'Update external reference' : 'Start processing' }}
               </button>

@@ -1,7 +1,9 @@
-import { Component, input } from '@angular/core';
+import { Component, inject, input } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
+import { previewImages } from '../image-preview/image-preview.component';
 
-/** Evidence thumbnails; opens the Cloudinary URL from the API in a new tab. */
+/** Evidence thumbnails; opens the Cloudinary URL from the API in the in-app viewer. */
 @Component({
   selector: 'app-evidence-gallery',
   imports: [MatIconModule],
@@ -9,5 +11,10 @@ import { MatIconModule } from '@angular/material/icon';
   styleUrl: './evidence-gallery.component.scss',
 })
 export class EvidenceGalleryComponent {
+  private readonly dialog = inject(MatDialog);
   readonly urls = input<string[]>([]);
+
+  open(index: number): void {
+    previewImages(this.dialog, this.urls(), index);
+  }
 }

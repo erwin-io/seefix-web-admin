@@ -96,7 +96,8 @@
 
             @if (decision() === 'INTERNAL' || decision() === 'PROCUREMENT') {
               <div class="form-grid">
-                <mat-form-field>
+                <!-- Grow only for the (long) load-error hint; otherwise match Final urgency's fixed spacing. -->
+                <mat-form-field [subscriptSizing]="categoriesError() ? 'dynamic' : 'fixed'">
                   <mat-label>Final category</mat-label>
                   <mat-select formControlName="finalCategory">
                     @for (c of categories(); track c.code) {
