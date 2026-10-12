@@ -1,3 +1,4 @@
+import { environment } from '@env/environment';
 import { Row } from '@app/core/models/api.model';
 import { Role } from '@app/core/models/user.model';
 
@@ -15,7 +16,12 @@ export const NEXT_STATUS: Record<string, string[]> = {
 };
 
 /** Completion upload limits enforced by seefix-api (MAX_UPLOAD_MB, MAX_REPORT_IMAGES, image types). */
-export const COMPLETION_UPLOAD = { maxFiles: 5, maxBytes: 10 * 1024 * 1024, types: ['image/jpeg', 'image/png', 'image/webp'] };
+export const COMPLETION_UPLOAD = {
+  maxFiles: 5,
+  maxMb: environment.maxImageMb,
+  maxBytes: environment.maxImageMb * 1024 * 1024,
+  types: ['image/jpeg', 'image/png', 'image/webp'],
+};
 
 /** GET /api/work-orders (WORKER sees only work orders where they are the lead). */
 export interface WorkOrderItem {

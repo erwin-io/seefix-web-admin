@@ -71,7 +71,7 @@
             <input #picker type="file" hidden (change)="pickFile(picker)" />
             <div class="span-all file-row">
               <button mat-stroked-button type="button" (click)="picker.click()"><mat-icon>attach_file</mat-icon>Choose file</button>
-              <span class="muted"> {{ file()?.name ?? 'No file chosen (max 10 MB)' }}</span>
+              <span class="muted"> {{ file()?.name ?? 'No file chosen (max ' + maxDocumentMb + ' MB)' }}</span>
             </div>
             <mat-form-field>
               <mat-label>Document type</mat-label>

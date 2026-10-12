@@ -1,5 +1,7 @@
 import { Injectable, inject } from '@angular/core';
+import { switchMap } from 'rxjs';
 import { ApiService } from '@app/core/http/api.service';
+import { DirectUploadService } from '@app/core/http/direct-upload.service';
 import { Items } from '@app/core/models/api.model';
 import { HandoffDetail, ProcurementInboxItem } from './procurement.models';
 
@@ -7,6 +9,7 @@ import { HandoffDetail, ProcurementInboxItem } from './procurement.models';
 @Injectable({ providedIn: 'root' })
 export class ProcurementService {
   private readonly api = inject(ApiService);
+  private readonly uploads = inject(DirectUploadService);
 
   inbox() {
     return this.api.get<Items<ProcurementInboxItem>>('/api/procurement/inbox');
@@ -33,9 +36,19 @@ export class ProcurementService {
     return this.api.post(`/api/maintenance/procurement/clarifications/${clarificationId}/respond`, { response });
   }
 
-  /** Multipart: `file`, `documentType`, optional `clarificationId`. */
-  uploadDocument(id: string, form: FormData) {
-    return this.api.upload(`/api/procurement/handoffs/${id}/documents`, form);
+  /** Uploads the file straight to Cloudinary, then attaches it with `documentType` and optional `clarificationId`. */
+  uploadDocument(id: string, file: File, fields: { documentType: string; clarificationId?: string | null }) {
+    return this.uploads.upload('procurement-document', [file]).pipe(
+      switchMap(([uploaded]) =>
+        this.api.post(`/api/procurement/handoffs/${id}/documents`, {
+          ...fields,
+          publicId: uploaded.publicId,
+          resourceType: uploaded.resourceType,
+          fileName: file.name,
+          mimeType: file.type || undefined,
+        }),
+      ),
+    );
   }
 
   recordOutcome(id: string, body: Record<string, unknown>) {

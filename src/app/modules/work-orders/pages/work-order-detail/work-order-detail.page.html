@@ -65,7 +65,7 @@
               <form [formGroup]="completionForm" (ngSubmit)="submitCompletion()">
                 <input #picker type="file" accept="image/jpeg,image/png,image/webp" multiple hidden (change)="addFiles(picker)" />
                 <button mat-stroked-button type="button" (click)="picker.click()"><mat-icon>add_a_photo</mat-icon>Add completion photos</button>
-                <span class="muted"> {{ files().length }}/5 · JPEG, PNG or WebP, max 10 MB each</span>
+                <span class="muted"> {{ files().length }}/5 · JPEG, PNG or WebP, max {{ maxImageMb }} MB each</span>
                 <div class="previews">
                   @for (f of files(); track f.url; let i = $index) {
                     <figure>

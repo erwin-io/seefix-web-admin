@@ -17,6 +17,26 @@ describe('workflow API contracts', () => {
   });
   afterEach(() => http.verify());
 
+  const UPLOAD_URL = 'https://api.cloudinary.com/v1_1/demo/auto/upload';
+
+  /** Answers the sign request and each Cloudinary upload; returns the upload requests. */
+  async function directUploads(purpose: string, results: { public_id: string; resource_type: string }[]) {
+    const sign = http.expectOne('/api/uploads/sign');
+    expect(sign.request.body).toEqual({ purpose });
+    sign.flush({ uploadUrl: UPLOAD_URL, fields: { timestamp: 1, signature: 'sig', api_key: 'k' } });
+    const sent = [];
+    for (const result of results) {
+      await Promise.resolve();
+      const upload = http.expectOne(UPLOAD_URL);
+      expect((upload.request.body as FormData).get('signature')).toBe('sig');
+      expect(upload.request.headers.has('Authorization')).toBe(false);
+      upload.flush(result);
+      sent.push(upload.request);
+    }
+    await Promise.resolve();
+    return sent;
+  }
+
   async function call(req: Promise<unknown>, method: string, url: string, respond: object = {}) {
     const t = http.expectOne((r) => r.url === url);
     expect(t.request.method).toBe(method);
@@ -37,7 +57,7 @@ describe('workflow API contracts', () => {
     expect(list.params.has('status')).toBe(false);
   });
 
-  it('work orders: assign, status, completion multipart, supervisor accept/rework', async () => {
+  it('work orders: assign, status, completion via direct upload, supervisor accept/rework', async () => {
     const w = TestBed.inject(WorkOrdersService);
     const assign = { assignedPartyName: 'Team A', responsibleLeadUserId: 'u1', responsibleLeadName: null, responsibleLeadContact: null, responsibleLeadEmail: null };
     expect((await call(firstValueFrom(w.assign('w1', assign)), 'POST', '/api/work-orders/w1/assign')).body).toEqual(assign);
@@ -46,13 +66,15 @@ describe('workflow API contracts', () => {
       message: 'waiting',
     });
 
-    const form = new FormData();
-    form.append('images', new Blob(['x'], { type: 'image/jpeg' }), 'a.jpg');
-    form.append('images', new Blob(['y'], { type: 'image/png' }), 'b.png');
-    form.append('repairNotes', 'Replaced breaker');
-    const sent = (await call(firstValueFrom(w.submitCompletion('w1', form)), 'POST', '/api/work-orders/w1/completion')).body as FormData;
-    expect(sent.getAll('images')).toHaveLength(2);
-    expect(sent.get('repairNotes')).toBe('Replaced breaker');
+    const images = [new File(['x'], 'a.jpg', { type: 'image/jpeg' }), new File(['y'], 'b.png', { type: 'image/png' })];
+    const done = firstValueFrom(w.submitCompletion('w1', images, { repairNotes: 'Replaced breaker' }));
+    const uploads = await directUploads('completion-image', [
+      { public_id: 'img-a', resource_type: 'image' },
+      { public_id: 'img-b', resource_type: 'image' },
+    ]);
+    expect(uploads.map((u) => ((u.body as FormData).get('file') as File).name)).toEqual(['a.jpg', 'b.png']);
+    const sent = await call(done, 'POST', '/api/work-orders/w1/completion');
+    expect(sent.body).toEqual({ repairNotes: 'Replaced breaker', imagePublicIds: ['img-a', 'img-b'] });
 
     await call(firstValueFrom(w.accept('w1')), 'POST', '/api/maintenance/work-orders/w1/complete');
     expect((await call(firstValueFrom(w.rework('w1', 'Leak remains')), 'POST', '/api/maintenance/work-orders/w1/rework')).body).toEqual({
@@ -68,11 +90,16 @@ describe('workflow API contracts', () => {
     expect(
       (await call(firstValueFrom(p.answerClarification('c1', 'Any UL-listed')), 'POST', '/api/maintenance/procurement/clarifications/c1/respond')).body,
     ).toEqual({ response: 'Any UL-listed' });
-    const doc = new FormData();
-    doc.append('file', new Blob(['%PDF'], { type: 'application/pdf' }), 'po.pdf');
-    doc.append('documentType', 'PROCUREMENT_REFERENCE');
-    const up = (await call(firstValueFrom(p.uploadDocument('h1', doc)), 'POST', '/api/procurement/handoffs/h1/documents')).body as FormData;
-    expect(up.get('documentType')).toBe('PROCUREMENT_REFERENCE');
+    const doc = new File(['%PDF'], 'po.pdf', { type: 'application/pdf' });
+    const uploaded = firstValueFrom(p.uploadDocument('h1', doc, { documentType: 'PROCUREMENT_REFERENCE' }));
+    await directUploads('procurement-document', [{ public_id: 'doc-1', resource_type: 'raw' }]);
+    expect((await call(uploaded, 'POST', '/api/procurement/handoffs/h1/documents')).body).toEqual({
+      documentType: 'PROCUREMENT_REFERENCE',
+      publicId: 'doc-1',
+      resourceType: 'raw',
+      fileName: 'po.pdf',
+      mimeType: 'application/pdf',
+    });
     const outcome = { executionType: 'CONTRACTOR', assignedPartyName: 'ACME', responsibleLeadName: 'Jo' };
     expect((await call(firstValueFrom(p.recordOutcome('h1', outcome)), 'POST', '/api/procurement/handoffs/h1/outcome')).body).toEqual(outcome);
   });
