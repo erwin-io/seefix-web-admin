@@ -20,14 +20,17 @@ export class ForgotPasswordPage {
   private readonly router = inject(Router);
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
-  readonly email = inject(FormBuilder).nonNullable.control('', [Validators.required, Validators.email]);
+  // A FormGroup bound with [formGroup] is what makes (ngSubmit) fire; without it the browser submits natively and reloads.
+  readonly form = inject(FormBuilder).nonNullable.group({
+    email: ['', [Validators.required, Validators.email]],
+  });
 
   async submit(): Promise<void> {
-    if (this.email.invalid || this.busy()) return this.email.markAsTouched();
+    if (this.form.invalid || this.busy()) return this.form.markAllAsTouched();
     this.busy.set(true);
     this.error.set(null);
     try {
-      const email = this.email.value.trim().toLowerCase();
+      const email = this.form.getRawValue().email.trim().toLowerCase();
       await firstValueFrom(this.auth.forgotPassword(email));
       await this.router.navigate(['/reset-password'], { state: { email } });
     } catch (e) {
