@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "angular",
+  "outputDirectory": "dist/seefix-web-admin/browser",
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://seefix-api.vercel.app/api/:path*" },
+    { "source": "/health", "destination": "https://seefix-api.vercel.app/health" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
