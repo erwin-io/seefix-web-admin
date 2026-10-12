@@ -1,5 +1,7 @@
 import { Injectable, inject } from '@angular/core';
+import { switchMap } from 'rxjs';
 import { ApiService } from '@app/core/http/api.service';
+import { DirectUploadService } from '@app/core/http/direct-upload.service';
 import { Items, Row } from '@app/core/models/api.model';
 import { AssignRequest, AssignableUser, WorkOrderDetail, WorkOrderItem } from './work-orders.models';
 
@@ -7,6 +9,7 @@ import { AssignRequest, AssignableUser, WorkOrderDetail, WorkOrderItem } from '.
 @Injectable({ providedIn: 'root' })
 export class WorkOrdersService {
   private readonly api = inject(ApiService);
+  private readonly uploads = inject(DirectUploadService);
 
   list(status: string | null) {
     return this.api.get<Items<WorkOrderItem>>('/api/work-orders', { status });
@@ -49,9 +52,11 @@ export class WorkOrdersService {
     return this.api.post(`/api/work-orders/${id}/materials`, body);
   }
 
-  /** Multipart: repeated `images` + `repairNotes` (+ optional actuals). */
-  submitCompletion(id: string, form: FormData) {
-    return this.api.upload(`/api/work-orders/${id}/completion`, form);
+  /** Uploads the photos straight to Cloudinary, then submits `repairNotes` (+ optional actuals) with their public IDs. */
+  submitCompletion(id: string, images: File[], fields: Record<string, unknown>) {
+    return this.uploads
+      .upload('completion-image', images)
+      .pipe(switchMap((uploaded) => this.api.post(`/api/work-orders/${id}/completion`, { ...fields, imagePublicIds: uploaded.map((u) => u.publicId) })));
   }
 
   accept(id: string) {

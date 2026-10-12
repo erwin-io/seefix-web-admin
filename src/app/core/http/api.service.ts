@@ -30,11 +30,6 @@ export class ApiService {
   put<T>(path: string, body: unknown): Observable<T> {
     return this.http.put<T>(apiUrl(path), body).pipe(normalize(environment.requestTimeoutMs));
   }
-
-  /** Multipart: the browser sets the boundary header. */
-  upload<T>(path: string, form: FormData): Observable<T> {
-    return this.http.post<T>(apiUrl(path), form).pipe(normalize(environment.uploadTimeoutMs));
-  }
 }
 
 export function apiUrl(path: string): string {

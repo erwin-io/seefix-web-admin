@@ -9,6 +9,9 @@ export const environment = {
   apiBaseUrl: '',
   requestTimeoutMs: 20000,
   uploadTimeoutMs: 120000,
+  /** Per-file limits, checked before uploading to Cloudinary. seefix-api enforces the same limits. */
+  maxImageMb: 10,
+  maxDocumentMb: 15,
   /** Realtime is only attempted when the API reports it is configured. */
   realtime: true,
   pollMs: 60000,

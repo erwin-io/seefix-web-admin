@@ -15,6 +15,7 @@ import { SessionService } from '@app/core/auth/session.service';
 import { Row } from '@app/core/models/api.model';
 import { PROCUREMENT_ACTORS, SUPERVISOR } from '@app/core/models/user.model';
 import { load } from '@app/core/utils/load';
+import { environment } from '@env/environment';
 import { UiService } from '@app/shared/services/ui.service';
 import { SHARED_IMPORTS } from '@app/shared/shared.imports';
 import { DOCUMENT_TYPES, EXECUTION_TYPES } from '../../procurement.models';
@@ -42,6 +43,7 @@ export class HandoffDetailPage {
   readonly data = load(() => this.procurement.handoff(this.id()));
   readonly busy = signal(false);
   readonly file = signal<File | null>(null);
+  readonly maxDocumentMb = environment.maxDocumentMb;
 
   readonly h = computed(() => this.data.value()?.handoff ?? null);
   readonly status = computed(() => this.h()?.['Status'] as string | undefined);
@@ -110,13 +112,10 @@ export class HandoffDetailPage {
   async upload(input: HTMLInputElement): Promise<void> {
     const file = this.file();
     if (!file) return this.ui.toast('Choose a file first.');
-    if (file.size > 10 * 1024 * 1024) return this.ui.toast('Files must be 10 MB or smaller.');
+    if (file.size > this.maxDocumentMb * 1024 * 1024) return this.ui.toast(`Files must be ${this.maxDocumentMb} MB or smaller.`);
     const v = this.docForm.getRawValue();
-    const form = new FormData();
-    form.append('file', file, file.name);
-    form.append('documentType', v.documentType ?? 'OTHER');
-    if (v.clarificationId) form.append('clarificationId', v.clarificationId);
-    await this.run(() => this.procurement.uploadDocument(this.id(), form), 'Document uploaded.', () => {
+    const fields = { documentType: v.documentType ?? 'OTHER', clarificationId: v.clarificationId || null };
+    await this.run(() => this.procurement.uploadDocument(this.id(), file, fields), 'Document uploaded.', () => {
       this.file.set(null);
       input.value = '';
     });

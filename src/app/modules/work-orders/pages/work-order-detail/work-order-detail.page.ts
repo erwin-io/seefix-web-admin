@@ -22,7 +22,7 @@ import { SHARED_IMPORTS } from '@app/shared/shared.imports';
 import { AssignableUser, COMPLETION_UPLOAD, NEXT_STATUS } from '../../work-orders.models';
 import { WorkOrdersService } from '../../work-orders.service';
 
-const { maxFiles: MAX_FILES, maxBytes: MAX_BYTES, types: IMAGE_TYPES } = COMPLETION_UPLOAD;
+const { maxFiles: MAX_FILES, maxMb: MAX_MB, maxBytes: MAX_BYTES, types: IMAGE_TYPES } = COMPLETION_UPLOAD;
 
 @Component({
   selector: 'app-work-order-detail-page',
@@ -90,6 +90,7 @@ export class WorkOrderDetailPage implements OnDestroy {
     stage: ['ACTUAL'],
     notes: [''],
   });
+  readonly maxImageMb = MAX_MB;
   readonly completionForm = this.fb.group({
     repairNotes: ['', Validators.required],
     actualLaborHours: [null as number | null, Validators.min(0)],
@@ -195,7 +196,7 @@ export class WorkOrderDetailPage implements OnDestroy {
     const picked = Array.from(input.files ?? []);
     input.value = '';
     const bad = picked.find((f) => !IMAGE_TYPES.includes(f.type) || f.size > MAX_BYTES);
-    if (bad) return this.ui.toast(`${bad.name}: use JPEG, PNG or WebP up to 10 MB.`);
+    if (bad) return this.ui.toast(`${bad.name}: use JPEG, PNG or WebP up to ${MAX_MB} MB.`);
     const next = [...this.files(), ...picked.map((file) => ({ file, url: URL.createObjectURL(file) }))];
     if (next.length > MAX_FILES) {
       next.slice(MAX_FILES).forEach((f) => URL.revokeObjectURL(f.url));
@@ -222,10 +223,9 @@ export class WorkOrderDetailPage implements OnDestroy {
       confirm: 'Submit completion',
     });
     if (!ok) return;
-    const form = new FormData();
-    this.files().forEach((f) => form.append('images', f.file, f.file.name));
-    for (const [k, v] of Object.entries(this.completionForm.getRawValue())) if (v !== null && v !== '') form.append(k, String(v));
-    await this.run(() => this.workOrders.submitCompletion(this.id(), form), 'Completion submitted.', () => {
+    const fields = Object.fromEntries(Object.entries(this.completionForm.getRawValue()).filter(([, v]) => v !== null && v !== ''));
+    const images = this.files().map((f) => f.file);
+    await this.run(() => this.workOrders.submitCompletion(this.id(), images, fields), 'Completion submitted.', () => {
       this.files().forEach((f) => URL.revokeObjectURL(f.url));
       this.files.set([]);
       this.completionForm.reset();
