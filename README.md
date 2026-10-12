@@ -86,6 +86,12 @@ aliases. Adding a module means adding a folder plus one `loadChildren` line in `
 
 If the API must live on another origin, set `apiBaseUrl` to that HTTPS origin at deploy time and add the web admin's origin to the API's `CORS_ORIGINS`.
 
+### Vercel
+`vercel.json` does on Vercel what `proxy.conf.json` does in dev: `/api/*` and `/health` are proxied to
+`https://seefix-api.vercel.app`, so the app stays same-origin (`apiBaseUrl: ''`, no CORS). Every other path falls back to
+`index.html` so deep links and refreshes work. Import the repo in Vercel (preset **Angular**, root `./`); no
+environment variables are needed. To point at another API, change the two destinations in `vercel.json`.
+
 ### Realtime (Pusher)
 
 The API exposes `GET /api/realtime/config` (public key + cluster only) and `POST /api/realtime/auth`
