@@ -12,6 +12,8 @@
   --mat-list-list-item-leading-icon-color: var(--sf-nav-fg-muted);
   --mat-list-list-item-hover-label-text-color: #fff;
   --mat-list-list-item-hover-leading-icon-color: #fff;
+  // Material's focus color is the dark on-surface color: keep a clicked/focused item its normal color.
+  --mat-list-list-item-focus-label-text-color: var(--sf-nav-fg);
   --mat-list-list-item-one-line-container-height: 44px;
 }
 
@@ -46,6 +48,7 @@
 .sidebar a.active {
   background: var(--sf-nav-active);
   --mat-list-list-item-label-text-color: #fff;
+  --mat-list-list-item-focus-label-text-color: #fff;
   --mat-list-list-item-leading-icon-color: #fff;
 
   &::before {
