@@ -7,10 +7,10 @@
 <div class="grid">
   <form class="card" [formGroup]="profile" (ngSubmit)="saveProfile()">
     <h2>Profile</h2>
-    <mat-form-field class="full"><mat-label>Full name</mat-label><input matInput formControlName="fullName" /></mat-form-field>
-    <mat-form-field class="full"><mat-label>Phone</mat-label><input matInput formControlName="phone" /></mat-form-field>
-    <mat-form-field class="full"><mat-label>Job title</mat-label><input matInput formControlName="jobTitle" /></mat-form-field>
-    <mat-form-field class="full"><mat-label>Department / trade</mat-label><input matInput formControlName="departmentOrTrade" /></mat-form-field>
+    <mat-form-field class="full"><mat-label>Full name</mat-label><input matInput formControlName="fullName" /><mat-error>{{ errorText(profile.get('fullName'), 'Full name') }}</mat-error></mat-form-field>
+    <mat-form-field class="full"><mat-label>Phone</mat-label><input matInput formControlName="phone" /><mat-error>{{ errorText(profile.get('phone'), 'Phone') }}</mat-error></mat-form-field>
+    <mat-form-field class="full"><mat-label>Job title</mat-label><input matInput formControlName="jobTitle" /><mat-error>{{ errorText(profile.get('jobTitle'), 'Job title') }}</mat-error></mat-form-field>
+    <mat-form-field class="full"><mat-label>Department / trade</mat-label><input matInput formControlName="departmentOrTrade" /><mat-error>{{ errorText(profile.get('departmentOrTrade'), 'Department / trade') }}</mat-error></mat-form-field>
     <button mat-flat-button type="submit" [disabled]="busy() || profile.pristine || profile.invalid">Save profile</button>
   </form>
 
@@ -20,12 +20,14 @@
     <mat-form-field class="full">
       <mat-label>Username</mat-label><input matInput formControlName="username" autocomplete="username" />
       <mat-hint>3–30: letters, digits, . _ -</mat-hint>
+      <mat-error>{{ errorText(username.get('username'), 'Username') }}</mat-error>
     </mat-form-field>
     <mat-form-field class="full">
       <mat-label>Current password</mat-label><input matInput [type]="shown('username.currentPassword') ? 'text' : 'password'" formControlName="currentPassword" autocomplete="current-password" />
       <button mat-icon-button matSuffix type="button" (click)="toggle('username.currentPassword')" [attr.aria-label]="shown('username.currentPassword') ? 'Hide password' : 'Show password'">
         <mat-icon>{{ shown('username.currentPassword') ? 'visibility_off' : 'visibility' }}</mat-icon>
       </button>
+      <mat-error>{{ errorText(username.get('currentPassword'), 'Current password') }}</mat-error>
     </mat-form-field>
     <button mat-flat-button type="submit" [disabled]="busy() || username.pristine || username.invalid">Change username</button>
   </form>
@@ -33,12 +35,13 @@
   <form class="card" [formGroup]="email" (ngSubmit)="saveEmail()">
     <h2>Email</h2>
     <p class="muted">Staff email changes apply immediately and sign you out everywhere.</p>
-    <mat-form-field class="full"><mat-label>New email</mat-label><input matInput type="email" formControlName="newEmail" autocomplete="email" /></mat-form-field>
+    <mat-form-field class="full"><mat-label>New email</mat-label><input matInput type="email" formControlName="newEmail" autocomplete="email" /><mat-error>{{ errorText(email.get('newEmail'), 'New email') }}</mat-error></mat-form-field>
     <mat-form-field class="full">
       <mat-label>Current password</mat-label><input matInput [type]="shown('email.currentPassword') ? 'text' : 'password'" formControlName="currentPassword" autocomplete="current-password" />
       <button mat-icon-button matSuffix type="button" (click)="toggle('email.currentPassword')" [attr.aria-label]="shown('email.currentPassword') ? 'Hide password' : 'Show password'">
         <mat-icon>{{ shown('email.currentPassword') ? 'visibility_off' : 'visibility' }}</mat-icon>
       </button>
+      <mat-error>{{ errorText(email.get('currentPassword'), 'Current password') }}</mat-error>
     </mat-form-field>
     <button mat-flat-button type="submit" [disabled]="busy() || email.pristine || email.invalid">Change email</button>
   </form>
@@ -51,6 +54,7 @@
       <button mat-icon-button matSuffix type="button" (click)="toggle('password.currentPassword')" [attr.aria-label]="shown('password.currentPassword') ? 'Hide password' : 'Show password'">
         <mat-icon>{{ shown('password.currentPassword') ? 'visibility_off' : 'visibility' }}</mat-icon>
       </button>
+      <mat-error>{{ errorText(password.get('currentPassword'), 'Current password') }}</mat-error>
     </mat-form-field>
     <mat-form-field class="full">
       <mat-label>New password</mat-label><input matInput [type]="shown('password.newPassword') ? 'text' : 'password'" formControlName="newPassword" autocomplete="new-password" />
@@ -58,6 +62,7 @@
         <mat-icon>{{ shown('password.newPassword') ? 'visibility_off' : 'visibility' }}</mat-icon>
       </button>
       <mat-hint>At least 8 characters.</mat-hint>
+      <mat-error>{{ errorText(password.get('newPassword'), 'New password') }}</mat-error>
     </mat-form-field>
     <button mat-flat-button type="submit" [disabled]="busy() || password.pristine || password.invalid">Change password</button>
   </form>
