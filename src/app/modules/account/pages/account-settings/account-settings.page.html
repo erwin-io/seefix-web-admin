@@ -11,7 +11,7 @@
     <mat-form-field class="full"><mat-label>Phone</mat-label><input matInput formControlName="phone" /></mat-form-field>
     <mat-form-field class="full"><mat-label>Job title</mat-label><input matInput formControlName="jobTitle" /></mat-form-field>
     <mat-form-field class="full"><mat-label>Department / trade</mat-label><input matInput formControlName="departmentOrTrade" /></mat-form-field>
-    <button mat-flat-button type="submit" [disabled]="busy() || profile.pristine">Save profile</button>
+    <button mat-flat-button type="submit" [disabled]="busy() || profile.pristine || profile.invalid">Save profile</button>
   </form>
 
   <form class="card" [formGroup]="username" (ngSubmit)="saveUsername()">
@@ -27,7 +27,7 @@
         <mat-icon>{{ shown('username.currentPassword') ? 'visibility_off' : 'visibility' }}</mat-icon>
       </button>
     </mat-form-field>
-    <button mat-flat-button type="submit" [disabled]="busy()">Change username</button>
+    <button mat-flat-button type="submit" [disabled]="busy() || username.pristine || username.invalid">Change username</button>
   </form>
 
   <form class="card" [formGroup]="email" (ngSubmit)="saveEmail()">
@@ -40,7 +40,7 @@
         <mat-icon>{{ shown('email.currentPassword') ? 'visibility_off' : 'visibility' }}</mat-icon>
       </button>
     </mat-form-field>
-    <button mat-flat-button type="submit" [disabled]="busy()">Change email</button>
+    <button mat-flat-button type="submit" [disabled]="busy() || email.pristine || email.invalid">Change email</button>
   </form>
 
   <form class="card" [formGroup]="password" (ngSubmit)="savePassword()">
@@ -59,6 +59,6 @@
       </button>
       <mat-hint>At least 8 characters.</mat-hint>
     </mat-form-field>
-    <button mat-flat-button type="submit" [disabled]="busy()">Change password</button>
+    <button mat-flat-button type="submit" [disabled]="busy() || password.pristine || password.invalid">Change password</button>
   </form>
 </div>
