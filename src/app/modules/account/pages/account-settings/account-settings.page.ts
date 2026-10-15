@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { Observable, firstValueFrom } from 'rxjs';
 import { SessionService } from '@app/core/auth/session.service';
@@ -15,7 +16,7 @@ import { AccountService } from '../../account.service';
  */
 @Component({
   selector: 'app-account-settings-page',
-  imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule],
+  imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule],
   styleUrl: './account-settings.page.scss',
   templateUrl: './account-settings.page.html',
 })
@@ -25,6 +26,18 @@ export class AccountSettingsPage {
   private readonly fb = inject(FormBuilder).nonNullable;
   readonly session = inject(SessionService);
   readonly busy = signal(false);
+  /** Password fields currently shown as text, by `form.control`. */
+  private readonly visible = signal(new Set<string>());
+
+  shown(field: string): boolean {
+    return this.visible().has(field);
+  }
+
+  toggle(field: string): void {
+    const next = new Set(this.visible());
+    if (!next.delete(field)) next.add(field);
+    this.visible.set(next);
+  }
   readonly roleLabel = () => ROLE_LABEL[this.session.role() ?? 'ADMIN'];
 
   private readonly u = this.session.user();

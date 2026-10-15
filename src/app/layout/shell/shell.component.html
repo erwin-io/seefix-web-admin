@@ -7,7 +7,7 @@
     [fixedInViewport]="mobile()"
   >
     <div class="brand">
-      <span class="brand-mark" aria-hidden="true">SF</span>
+      <img class="brand-mark" src="brand-logo.png" alt="" />
       <div>
         <strong>SEEFIX</strong>
         <small>Maintenance Admin</small>
@@ -74,7 +74,7 @@
       </button>
       <mat-menu #me="matMenu" xPosition="before">
         <a mat-menu-item routerLink="/account"><mat-icon>manage_accounts</mat-icon>Account settings</a>
-        <button mat-menu-item (click)="session.end('You have signed out.')"><mat-icon>logout</mat-icon>Sign out</button>
+        <button mat-menu-item (click)="signOut()"><mat-icon>logout</mat-icon>Sign out</button>
       </mat-menu>
     </mat-toolbar>
 

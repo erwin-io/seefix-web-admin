@@ -21,7 +21,12 @@
       <mat-label>Username</mat-label><input matInput formControlName="username" autocomplete="username" />
       <mat-hint>3–30: letters, digits, . _ -</mat-hint>
     </mat-form-field>
-    <mat-form-field class="full"><mat-label>Current password</mat-label><input matInput type="password" formControlName="currentPassword" autocomplete="current-password" /></mat-form-field>
+    <mat-form-field class="full">
+      <mat-label>Current password</mat-label><input matInput [type]="shown('username.currentPassword') ? 'text' : 'password'" formControlName="currentPassword" autocomplete="current-password" />
+      <button mat-icon-button matSuffix type="button" (click)="toggle('username.currentPassword')" [attr.aria-label]="shown('username.currentPassword') ? 'Hide password' : 'Show password'">
+        <mat-icon>{{ shown('username.currentPassword') ? 'visibility_off' : 'visibility' }}</mat-icon>
+      </button>
+    </mat-form-field>
     <button mat-flat-button type="submit" [disabled]="busy()">Change username</button>
   </form>
 
@@ -29,16 +34,29 @@
     <h2>Email</h2>
     <p class="muted">Staff email changes apply immediately and sign you out everywhere.</p>
     <mat-form-field class="full"><mat-label>New email</mat-label><input matInput type="email" formControlName="newEmail" autocomplete="email" /></mat-form-field>
-    <mat-form-field class="full"><mat-label>Current password</mat-label><input matInput type="password" formControlName="currentPassword" autocomplete="current-password" /></mat-form-field>
+    <mat-form-field class="full">
+      <mat-label>Current password</mat-label><input matInput [type]="shown('email.currentPassword') ? 'text' : 'password'" formControlName="currentPassword" autocomplete="current-password" />
+      <button mat-icon-button matSuffix type="button" (click)="toggle('email.currentPassword')" [attr.aria-label]="shown('email.currentPassword') ? 'Hide password' : 'Show password'">
+        <mat-icon>{{ shown('email.currentPassword') ? 'visibility_off' : 'visibility' }}</mat-icon>
+      </button>
+    </mat-form-field>
     <button mat-flat-button type="submit" [disabled]="busy()">Change email</button>
   </form>
 
   <form class="card" [formGroup]="password" (ngSubmit)="savePassword()">
     <h2>Password</h2>
     <p class="muted">Changing your password signs you out on all devices.</p>
-    <mat-form-field class="full"><mat-label>Current password</mat-label><input matInput type="password" formControlName="currentPassword" autocomplete="current-password" /></mat-form-field>
     <mat-form-field class="full">
-      <mat-label>New password</mat-label><input matInput type="password" formControlName="newPassword" autocomplete="new-password" />
+      <mat-label>Current password</mat-label><input matInput [type]="shown('password.currentPassword') ? 'text' : 'password'" formControlName="currentPassword" autocomplete="current-password" />
+      <button mat-icon-button matSuffix type="button" (click)="toggle('password.currentPassword')" [attr.aria-label]="shown('password.currentPassword') ? 'Hide password' : 'Show password'">
+        <mat-icon>{{ shown('password.currentPassword') ? 'visibility_off' : 'visibility' }}</mat-icon>
+      </button>
+    </mat-form-field>
+    <mat-form-field class="full">
+      <mat-label>New password</mat-label><input matInput [type]="shown('password.newPassword') ? 'text' : 'password'" formControlName="newPassword" autocomplete="new-password" />
+      <button mat-icon-button matSuffix type="button" (click)="toggle('password.newPassword')" [attr.aria-label]="shown('password.newPassword') ? 'Hide password' : 'Show password'">
+        <mat-icon>{{ shown('password.newPassword') ? 'visibility_off' : 'visibility' }}</mat-icon>
+      </button>
       <mat-hint>At least 8 characters.</mat-hint>
     </mat-form-field>
     <button mat-flat-button type="submit" [disabled]="busy()">Change password</button>

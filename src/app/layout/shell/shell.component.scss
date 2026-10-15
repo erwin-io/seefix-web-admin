@@ -34,15 +34,13 @@
   }
 }
 
+// public/brand-logo.png, any size: shown at 36x36 without stretching.
 .brand-mark {
-  display: grid;
-  place-items: center;
+  flex: none;
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: var(--sf-accent);
-  color: #fff;
-  font-weight: 700;
+  object-fit: contain;
 }
 
 // A clicked (focused) item looks active right away, before its lazy-loaded page finishes routing.

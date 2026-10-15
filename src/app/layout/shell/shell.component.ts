@@ -16,6 +16,7 @@ import { SessionService } from '@app/core/auth/session.service';
 import { MAINTENANCE, PROCUREMENT_READERS, ROLE_LABEL, Role, WORK_ROLES } from '@app/core/models/user.model';
 import { Notification } from '@app/core/notifications/notification.model';
 import { NotificationService } from '@app/core/notifications/notification.service';
+import { UiService } from '@app/shared/services/ui.service';
 import { entityLink } from '@app/shared/utils/entity-link';
 
 interface NavItem {
@@ -49,6 +50,7 @@ export class ShellComponent implements OnInit {
   readonly session = inject(SessionService);
   readonly inbox = inject(NotificationService);
   private readonly router = inject(Router);
+  private readonly ui = inject(UiService);
 
   readonly mobile = toSignal(inject(BreakpointObserver).observe('(max-width: 960px)').pipe(map((r) => r.matches)), {
     initialValue: false,
@@ -83,6 +85,12 @@ export class ShellComponent implements OnInit {
     void this.inbox.markRead(n).catch(() => undefined);
     const link = entityLink(n.entityType, n.entityId, n.payload);
     if (link) void this.router.navigateByUrl(link);
+  }
+
+  async signOut(): Promise<void> {
+    if (await this.ui.confirm({ title: 'Sign out?', message: 'You will need to sign in again to continue.', confirm: 'Yes, sign out' })) {
+      this.session.end('You have signed out.');
+    }
   }
 
   closeOnMobile(drawer: { close: () => void }): void {

@@ -1,6 +1,6 @@
 .layout { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 16px; align-items: start; }
 @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
-.cats { padding: 8px 0; max-height: 70vh; overflow: auto; }
+.cats { padding: 8px 0; max-height: 70vh; overflow: auto; --mat-list-list-item-container-shape: 0; --mat-list-active-indicator-shape: 0; }
 .cats .active { background: var(--sf-accent-soft); }
 .row { display: grid; grid-template-columns: 1fr 1.5fr 0.8fr 0.8fr auto auto auto; gap: 8px; align-items: center; }
 .row.mat { grid-template-columns: 1fr 1.5fr 0.7fr 0.7fr 0.7fr auto auto; }
