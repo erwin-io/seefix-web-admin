@@ -45,7 +45,9 @@
   font-weight: 700;
 }
 
-.sidebar a.active {
+// A clicked (focused) item looks active right away, before its lazy-loaded page finishes routing.
+.sidebar a.active,
+.sidebar a:focus {
   background: var(--sf-nav-active);
   --mat-list-list-item-label-text-color: #fff;
   --mat-list-list-item-focus-label-text-color: #fff;
