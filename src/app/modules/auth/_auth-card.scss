@@ -31,15 +31,13 @@ mat-progress-bar {
   gap: 10px;
   margin-bottom: 20px;
 
-  span {
-    display: grid;
-    place-items: center;
+  // public/brand-logo.png (same as the sidebar), any size: shown at 40x40 without stretching.
+  img {
+    flex: none;
     width: 40px;
     height: 40px;
     border-radius: 10px;
-    background: var(--sf-accent);
-    color: #fff;
-    font-weight: 700;
+    object-fit: contain;
   }
 }
 
