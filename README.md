@@ -6,18 +6,38 @@ Reporters are refused and use the mobile app.
 Angular 21 (standalone, zoneless, signals) · Angular Material 21 · SCSS · pusher-js. It talks only to `seefix-api`:
 no Agent, database or Cloudinary secrets in the browser.
 
-## Run locally (Windows)
+Production: **https://seefix-web-admin.vercel.app** (every push to `main` deploys).
 
-Prerequisites: Node 22.12+ (tested on 22.17.1), a running `seefix-api` on `http://127.0.0.1:3000`
-(with PostgreSQL and the Agent as described in the API README).
+## Prerequisites
 
-```powershell
-cd C:\Development\seefixmanagement\seefix-web-admin
-npm ci
-npm start            # http://localhost:4200, /api and /health proxied to 127.0.0.1:3000 (proxy.conf.json)
-```
+| Tool | Version | Notes |
+|---|---|---|
+| Git | any | to clone the repo |
+| Node.js | 22.12 or newer (tested on 22.17.1) | `node -v`. Angular 21 needs ≥ 20.19 / 22.12 |
+| npm | 10+ (comes with Node) | the repo pins `npm@10.9.2` |
+| `seefix-api` | running on `http://127.0.0.1:3000` | set it up first: [seefix-api README](https://github.com/seefixmanagement/seefix-api#setup-step-by-step) |
+| A staff account | any role except Reporter | e.g. the seeded `maintenance.staff@seefix.local` (seefix-api `scripts/seed-rbac-users.js`) |
 
-Sign in with any staff account (email **or** username). No CORS setup is needed in dev because of the proxy.
+The Angular CLI doesn't need a global install; `npm start` uses the project's copy.
+
+## Run locally (step by step)
+
+1. **Start seefix-api** in its own terminal (`npm run dev` in `seefix-api`) and check `http://127.0.0.1:3000/health`.
+2. **Clone and install**
+   ```powershell
+   git clone https://github.com/seefixmanagement/seefix-web-admin.git
+   cd seefix-web-admin
+   npm ci
+   ```
+3. **Start**
+   ```powershell
+   npm start            # http://localhost:4200, /api and /health proxied to 127.0.0.1:3000 (proxy.conf.json)
+   ```
+4. Open `http://localhost:4200` and sign in with a staff account (email **or** username). No CORS setup is needed in
+   dev because of the proxy. If your API runs elsewhere, change the `target` in `proxy.conf.json`.
+
+To use the production API from your machine instead, point the two targets in `proxy.conf.json` to
+`https://seefix-api.vercel.app`, and don't commit that change.
 
 ### Quality gates
 
@@ -116,21 +136,11 @@ Polling (every 60 s) is always armed and only pauses while the private channel i
 Client guards only hide what a role can't use. **Server RBAC is authoritative**, and every mutation re-reads
 the record afterwards, so a 409 shows the server's current state.
 
-## Backend-gated features (`seefix-api` PR erwin-io/seefix-api#2, branch `feat/web-admin-support`)
-
-Until that PR is deployed, the affected UI degrades with a visible message instead of failing: no user picker when
-dispatching (enter a lead name; Workers won't see the work order), the AI category is the only option on review,
-and notifications use polling.
-
-- `GET /api/work-orders/assignable-users`: staff pick a responsible lead (`/api/admin/users` is Admin-only).
-- `GET /api/reference/categories`: active categories for review overrides.
-- `GET /api/realtime/config`, `POST /api/realtime/auth` and the after-commit `notification.created` publish.
-- Procurement handoff detail now returns `ReportId`.
-
-## Known gaps (backend tickets)
+## Known gaps
 
 1. No user edit / deactivate / admin password reset endpoints: the Users page is list + create only.
 2. No server pagination or search on staff lists (API caps at 200 rows); search is client-side.
 3. Realtime only signals notifications; list/detail pages refresh on demand.
 4. No Buildings/Locations admin endpoints.
-5. Live end-to-end runs against real staff accounts, Cloudinary and the Agent are still pending; unit tests use HTTP mocks.
+
+Unit tests use HTTP mocks; they don't call a live API.
