@@ -118,14 +118,15 @@ export class AccountSettingsPage {
   }
 
   /**
-   * Validation errors from the API go on the field they concern; an error that isn't tied to one field marks every
-   * field of the form. Angular clears them as soon as the field is edited. Network/server errors stay a toast.
+   * Every API error shows the snackbar. Validation errors also go on the field they concern; one that isn't tied to
+   * a field marks every field of the form. Angular clears them as soon as the field is edited.
    */
   private showError(form: FormGroup, e: unknown): void {
     const err = toAppError(e);
+    this.ui.error(err);
     const field = err.code ? FIELD_FOR_CODE[err.code] : undefined;
     const fieldError = field || err.kind === 'VALIDATION' || err.kind === 'CONFLICT';
-    if (!fieldError) return this.ui.error(err);
+    if (!fieldError) return;
     const targets = field && form.get(field) ? [form.get(field)!] : Object.values(form.controls);
     for (const control of targets) {
       control.setErrors({ ...control.errors, server: err.message });

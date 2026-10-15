@@ -9,6 +9,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { safeReturnUrl } from '@app/core/auth/auth.guards';
 import { SessionService } from '@app/core/auth/session.service';
 import { toAppError } from '@app/core/http/app-error';
+import { UiService } from '@app/shared/services/ui.service';
 
 @Component({
   selector: 'app-login-page',
@@ -20,6 +21,7 @@ export class LoginPage {
   private readonly session = inject(SessionService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly ui = inject(UiService);
   readonly busy = signal(false);
   readonly showPassword = signal(false);
   readonly error = signal<string | null>(null);
@@ -39,6 +41,7 @@ export class LoginPage {
       await this.router.navigateByUrl(safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl')), { replaceUrl: true });
     } catch (e) {
       this.error.set(toAppError(e).message);
+      this.ui.error(e);
     } finally {
       this.busy.set(false);
     }

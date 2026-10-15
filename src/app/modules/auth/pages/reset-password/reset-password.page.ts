@@ -6,7 +6,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { Router, RouterLink } from '@angular/router';
 import { SessionService } from '@app/core/auth/session.service';
-import { toAppError } from '@app/core/http/app-error';
+import { AppError, toAppError } from '@app/core/http/app-error';
+import { UiService } from '@app/shared/services/ui.service';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../auth.service';
 
@@ -20,6 +21,7 @@ export class ResetPasswordPage {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly session = inject(SessionService);
+  private readonly ui = inject(UiService);
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
   readonly form = inject(FormBuilder).nonNullable.group({
@@ -40,9 +42,11 @@ export class ResetPasswordPage {
     } catch (e) {
       const err = toAppError(e);
       // RESET_INVALID (unknown email) must read like a wrong code: no account enumeration.
-      this.error.set(
-        ['RESET_INVALID', 'OTP_INVALID', 'OTP_EXPIRED'].includes(err.code ?? '') ? 'The code is invalid or expired. Request a new one.' : err.message,
-      );
+      const message = ['RESET_INVALID', 'OTP_INVALID', 'OTP_EXPIRED'].includes(err.code ?? '')
+        ? 'The code is invalid or expired. Request a new one.'
+        : err.message;
+      this.error.set(message);
+      this.ui.error(new AppError(err.kind, message, err.code, err.status));
     } finally {
       this.busy.set(false);
     }

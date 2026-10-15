@@ -6,6 +6,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { Router, RouterLink } from '@angular/router';
 import { toAppError } from '@app/core/http/app-error';
+import { UiService } from '@app/shared/services/ui.service';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../auth.service';
 
@@ -18,6 +19,7 @@ import { AuthService } from '../../auth.service';
 export class ForgotPasswordPage {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly ui = inject(UiService);
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
   // A FormGroup bound with [formGroup] is what makes (ngSubmit) fire; without it the browser submits natively and reloads.
@@ -35,6 +37,7 @@ export class ForgotPasswordPage {
       await this.router.navigate(['/reset-password'], { state: { email } });
     } catch (e) {
       this.error.set(toAppError(e).message);
+      this.ui.error(e);
     } finally {
       this.busy.set(false);
     }

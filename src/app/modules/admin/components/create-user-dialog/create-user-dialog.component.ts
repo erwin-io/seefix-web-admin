@@ -6,6 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { toAppError } from '@app/core/http/app-error';
+import { UiService } from '@app/shared/services/ui.service';
 import { ROLE_LABEL, Role } from '@app/core/models/user.model';
 import { firstValueFrom } from 'rxjs';
 import { CreateUserRequest } from '../../admin.models';
@@ -20,6 +21,7 @@ import { AdminService } from '../../admin.service';
 })
 export class CreateUserDialogComponent {
   private readonly admin = inject(AdminService);
+  private readonly ui = inject(UiService);
   private readonly ref = inject(MatDialogRef<CreateUserDialogComponent>);
   readonly roles = Object.keys(ROLE_LABEL) as Role[];
   readonly label = ROLE_LABEL;
@@ -47,6 +49,7 @@ export class CreateUserDialogComponent {
       this.ref.close(true);
     } catch (e) {
       this.error.set(toAppError(e).message);
+      this.ui.error(e);
     } finally {
       this.busy.set(false);
     }

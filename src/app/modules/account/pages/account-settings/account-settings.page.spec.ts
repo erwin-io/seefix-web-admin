@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
+import { UiService } from '@app/shared/services/ui.service';
 import { AccountSettingsPage } from './account-settings.page';
 
 describe('AccountSettingsPage errors', () => {
@@ -27,11 +28,13 @@ describe('AccountSettingsPage errors', () => {
     const fixture = TestBed.createComponent(AccountSettingsPage);
     const page = fixture.componentInstance;
     fixture.detectChanges();
+    const snackbar = vi.spyOn(TestBed.inject(UiService), 'error');
     page.username.setValue({ username: 'worker.b', currentPassword: 'wrong-pass' });
 
     await fail(() => page.saveUsername(), '/api/auth/me/username', 401, 'CURRENT_PASSWORD_INCORRECT', 'Current password is incorrect.');
     expect(page.username.controls.currentPassword.errors).toEqual({ server: 'Current password is incorrect.' });
     expect(page.username.controls.username.errors).toBeNull();
+    expect(snackbar).toHaveBeenCalledTimes(1); // the field message and the snackbar both show
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
