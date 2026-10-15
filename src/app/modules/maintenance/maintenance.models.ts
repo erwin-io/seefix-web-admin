@@ -13,6 +13,11 @@ export interface Screening {
 }
 
 export type Triage = 'all' | 'actionable' | 'screening';
+
+/** Same split the API's `?triage=` makes, from the screening it sends with each row (local: no list call). */
+export function byTriage<T>(rows: T[], triage: Triage, actionable: (row: T) => boolean): T[] {
+  return triage === 'all' ? rows : rows.filter((r) => actionable(r) === (triage === 'actionable'));
+}
 export type Decision = 'INTERNAL' | 'PROCUREMENT' | 'NO_ACTION' | 'DUPLICATE';
 export const URGENCIES = ['Low', 'Medium', 'High', 'Critical'] as const;
 

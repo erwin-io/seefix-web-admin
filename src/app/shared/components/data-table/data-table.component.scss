@@ -1,0 +1,54 @@
+:host {
+  display: block;
+}
+
+.table-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+
+  mat-form-field {
+    width: 240px;
+  }
+
+  .spacer {
+    flex: 1;
+  }
+
+  .count {
+    color: var(--sf-muted);
+    font-size: 13px;
+  }
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+
+  span {
+    flex: 1;
+  }
+
+  &.error {
+    color: var(--sf-danger);
+  }
+
+  &.warn {
+    color: var(--sf-warn);
+  }
+}
+
+.table-wrap tr.static {
+  cursor: default;
+}
+
+.hidden {
+  display: none !important;
+}

@@ -1,24 +1,33 @@
 import { Injectable, inject } from '@angular/core';
+import { DatasetDef } from '@app/core/data/dataset.store';
 import { ApiService } from '@app/core/http/api.service';
 import { Items, Row } from '@app/core/models/api.model';
-import { ActionItem, CategoryRef, MaintenanceReportItem, ReportDetail, ReviewQueueItem, ReviewResult, Triage } from './maintenance.models';
+import { ActionItem, CategoryRef, MaintenanceReportItem, ReportDetail, ReviewQueueItem, ReviewResult } from './maintenance.models';
+
+/** Full-list datasets (every page, filtered/sorted locally). Server order = business ranking. */
+export const ACTION_CENTER: DatasetDef<ActionItem> = {
+  key: 'action-center',
+  path: '/api/maintenance/action-center',
+  idOf: (a) => `${a.EntityType}:${a.EntityId}:${a.ActionType}`,
+  domains: ['reports', 'work_orders', 'procurement', 'reference'],
+};
+export const REVIEW_QUEUE: DatasetDef<ReviewQueueItem> = {
+  key: 'review-queue',
+  path: '/api/maintenance/review-queue',
+  idOf: (r) => r.ReportId,
+  domains: ['reports', 'reference'],
+};
+export const REPORTS: DatasetDef<MaintenanceReportItem> = {
+  key: 'reports',
+  path: '/api/maintenance/reports',
+  idOf: (r) => r.id,
+  domains: ['reports', 'reference'],
+};
 
 /** seefix-api /api/maintenance/* and report detail. */
 @Injectable({ providedIn: 'root' })
 export class MaintenanceService {
   private readonly api = inject(ApiService);
-
-  actionCenter() {
-    return this.api.get<Items<ActionItem>>('/api/maintenance/action-center');
-  }
-
-  reviewQueue(triage: Triage) {
-    return this.api.get<Items<ReviewQueueItem>>('/api/maintenance/review-queue', { triage });
-  }
-
-  reports(triage: Triage, status: string | null) {
-    return this.api.get<Items<MaintenanceReportItem>>('/api/maintenance/reports', { triage, status });
-  }
 
   /** Role-scoped by the API: staff see all, Procurement/Worker only linked reports. */
   report(id: string) {
