@@ -15,6 +15,9 @@ const TONE: Record<string, string> = {
   Low: 'muted', Medium: 'info', High: 'warn', Critical: 'danger',
   // Account
   ACTIVE: 'ok', INACTIVE: 'muted',
+  // AI completion check visual result (advisory)
+  VISIBLE_IMPROVEMENT: 'ok', ISSUE_STILL_VISIBLE: 'warn', ADDITIONAL_CONCERN: 'warn', INSUFFICIENT_IMAGE: 'muted',
+  SUPERVISOR_REVIEW_REQUIRED: 'info',
 };
 
 @Component({

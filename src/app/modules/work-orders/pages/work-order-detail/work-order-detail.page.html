@@ -46,13 +46,57 @@
             <div>
               <strong>AI completion check: {{ (completion.value()?.['completionAgentStatus'] ?? w['CompletionAgentStatus']) | humanize }}</strong>
               <p>
-                Visual result: {{ (completion.value()?.['visualResult'] ?? w['CompletionVisualResult']) ?? 'pending' }}.
+                Visual result: {{ ((completion.value()?.['visualResult'] ?? w['CompletionVisualResult']) | humanize) || 'pending' }}.
                 Advisory only; the Maintenance Supervisor decides acceptance.
               </p>
             </div>
           </div>
-          @if (completion.value()?.['assessment']; as a) {
-            <details><summary class="muted">Assessment details</summary><pre>{{ a | json }}</pre></details>
+          @if (assessment(); as a) {
+            <div class="assessment">
+              <div class="flags">
+                <app-status-chip [value]="a.visual_result" />
+                @if (a.model_response?.visible_issue_still_present) { <span class="chip tone-warn">Issue still visible</span> }
+                @if (a.model_response?.additional_visible_concern) { <span class="chip tone-warn">New concern spotted</span> }
+                @if (a.model_response?.insufficient_completion_image) { <span class="chip tone-muted">Photo not clear enough</span> }
+              </div>
+              @if (a.model_response?.summary) {
+                <label>Summary</label>
+                <p>{{ a.model_response?.summary }}</p>
+              }
+              @if (a.model_response?.observed_changes?.length) {
+                <label>What changed</label>
+                <ul>
+                  @for (c of a.model_response?.observed_changes; track $index) { <li>{{ c }}</li> }
+                </ul>
+              }
+              @if (plannedVsActual().length) {
+                <label>Planned vs actual</label>
+                <table class="pva">
+                  <thead><tr><th></th><th>Planned</th><th>Actual</th><th>Difference</th></tr></thead>
+                  <tbody>
+                    @for (r of plannedVsActual(); track r.label) {
+                      <tr>
+                        <td>{{ r.label }}</td>
+                        <td>{{ r.planned ?? '—' }}</td>
+                        <td>{{ r.actual ?? '—' }}</td>
+                        <td [class.over]="(r.difference ?? 0) > 0">{{ r.difference === null ? '—' : (r.difference > 0 ? '+' : '') + r.difference }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+              @for (l of a.model_response?.limitations ?? []; track $index) {
+                <p class="muted small">{{ l }}</p>
+              }
+              @if (isAdmin()) {
+                <details>
+                  <summary class="muted small">Technical details</summary>
+                  <p class="muted small">
+                    {{ a.provider }} · {{ a.model_id }} · prompt {{ a.prompt_version }} · {{ a.processing_time_ms }} ms
+                  </p>
+                </details>
+              }
+            </div>
           }
         </section>
       }

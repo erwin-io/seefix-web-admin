@@ -1,4 +1,4 @@
-import { DatePipe, JsonPipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { Component, OnDestroy, computed, inject, input, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -24,10 +24,35 @@ import { WorkOrdersService } from '../../work-orders.service';
 
 const { maxFiles: MAX_FILES, maxMb: MAX_MB, maxBytes: MAX_BYTES, types: IMAGE_TYPES } = COMPLETION_UPLOAD;
 
+/** seefix-agents CompletionAssessmentResult, as stored by the API (snake_case). */
+interface CompletionAssessment {
+  visual_result?: string;
+  model_response?: {
+    summary?: string;
+    observed_changes?: string[];
+    limitations?: string[];
+    visible_issue_still_present?: boolean;
+    additional_visible_concern?: boolean;
+    insufficient_completion_image?: boolean;
+  };
+  planned_vs_actual?: Record<string, unknown>;
+  provider?: string;
+  model_id?: string;
+  prompt_version?: string;
+  processing_time_ms?: number;
+}
+
+interface PlannedVsActual {
+  label: string;
+  planned: number | null;
+  actual: number | null;
+  difference: number | null;
+}
+
 @Component({
   selector: 'app-work-order-detail-page',
   imports: [
-    DatePipe, JsonPipe, RouterLink, ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatExpansionModule,
+    DatePipe, RouterLink, ReactiveFormsModule, MatButtonModule, MatCheckboxModule, MatExpansionModule,
     MatFormFieldModule, MatIconModule, MatInputModule, MatMenuModule, MatSelectModule, ...SHARED_IMPORTS,
   ],
   templateUrl: './work-order-detail.page.html',
@@ -53,6 +78,19 @@ export class WorkOrderDetailPage implements OnDestroy {
   readonly status = computed(() => this.wo()?.['Status'] as string | undefined);
   readonly isStaff = computed(() => this.session.has(...MAINTENANCE));
   readonly isSupervisor = computed(() => this.session.has(...SUPERVISOR));
+  readonly isAdmin = computed(() => this.session.has('ADMIN'));
+  readonly assessment = computed(() => this.completion.value()?.['assessment'] as CompletionAssessment | undefined);
+  /** Duration, crew and labor rows, plus material item counts. */
+  readonly plannedVsActual = computed((): PlannedVsActual[] => {
+    const pva = this.assessment()?.planned_vs_actual ?? {};
+    const rows = Object.values(pva).filter((v): v is PlannedVsActual => typeof v === 'object' && v !== null && 'label' in v);
+    const planned = pva['plannedMaterialCount'];
+    const actual = pva['actualMaterialCount'];
+    if (typeof planned === 'number' && typeof actual === 'number') {
+      rows.push({ label: 'Material items', planned, actual, difference: actual - planned });
+    }
+    return rows;
+  });
   readonly closed = computed(() => ['COMPLETED', 'CANCELLED'].includes(this.status() ?? ''));
   readonly canAssign = computed(() => this.isStaff() && ['PENDING_ASSIGNMENT', 'ASSIGNED'].includes(this.status() ?? ''));
   readonly nextStatuses = computed(() => NEXT_STATUS[this.status() ?? ''] ?? []);
