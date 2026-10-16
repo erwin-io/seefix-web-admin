@@ -33,6 +33,8 @@ export interface WorkOrderItem {
   plannedStartAt: string | null;
   deadline: string | null;
   completionAgentStatus: string | null;
+  /** seefix-api work-orders list `createdAt` (every row has it; absent on an older API). */
+  createdAt?: string;
   reportNo: string;
   requestNo: string;
 }

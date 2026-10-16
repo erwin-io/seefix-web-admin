@@ -12,6 +12,7 @@ import { Router } from '@angular/router';
 import { useDataset } from '@app/core/data/dataset.store';
 import { DataTableComponent, newestFirst } from '@app/shared/components/data-table/data-table.component';
 import { SHARED_IMPORTS } from '@app/shared/shared.imports';
+import { ANY_DAY, DateRangeFilterComponent, DayRange, inDayRange } from '@app/shared/components/date-range-filter/date-range-filter.component';
 import { MaintenanceReportItem, REPORT_STATUSES, Triage, byTriage } from '../../maintenance.models';
 import { REPORTS } from '../../maintenance.service';
 
@@ -20,7 +21,7 @@ import { REPORTS } from '../../maintenance.service';
   selector: 'app-report-list-page',
   imports: [
     DataTableComponent, DatePipe, FormsModule, MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatIconModule,
-    MatSelectModule, MatSortModule, MatTableModule, ...SHARED_IMPORTS,
+    MatSelectModule, MatSortModule, MatTableModule, DateRangeFilterComponent, ...SHARED_IMPORTS,
   ],
   templateUrl: './report-list.page.html',
   styleUrl: './report-list.page.scss',
@@ -31,10 +32,13 @@ export class ReportListPage {
   readonly columns = ['priority', 'report', 'status', 'category', 'location', 'created'];
   readonly triage = signal<Triage>('all');
   readonly status = signal<string | null>(null);
+  /** Submitted date (owner item 10). */
+  readonly submitted = signal<DayRange>(ANY_DAY);
   readonly data = useDataset(REPORTS);
   readonly rows = computed(() => {
     const status = this.status();
-    const rows = byTriage(this.data.rows(), this.triage(), (r) => r.screening.isActionable);
+    const range = this.submitted();
+    const rows = byTriage(this.data.rows(), this.triage(), (r) => r.screening.isActionable).filter((r) => inDayRange(r.createdAt, range));
     return status ? rows.filter((r) => r.status === status) : rows;
   });
   readonly order = newestFirst<MaintenanceReportItem>((r) => r.createdAt, (r) => r.id);
