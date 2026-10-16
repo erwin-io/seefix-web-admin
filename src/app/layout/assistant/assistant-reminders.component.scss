@@ -70,3 +70,31 @@ li {
 .live {
   color: var(--sf-ok);
 }
+
+.when {
+  display: flex;
+  gap: 8px;
+  .date {
+    flex: 3;
+  }
+  .time {
+    flex: 2;
+  }
+  input[readonly] {
+    cursor: pointer;
+  }
+}
+
+.zone {
+  margin: 2px 0 8px;
+  font-size: 12px;
+  color: var(--sf-muted);
+}
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
