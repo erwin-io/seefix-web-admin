@@ -127,10 +127,10 @@ describe('AnalyticsOverviewComponent', () => {
     const color = (label: string) =>
       ([...el.querySelectorAll('app-stat-card')].find((c) => c.querySelector('.label')?.textContent?.trim() === label)?.querySelector('.value') as HTMLElement).style.color;
     expect(color('Under 1 day')).toBe(''); // 0
-    expect(color('1–3 days')).toBe('rgb(180, 83, 9)');
-    expect(color('3–7 days')).toBe('rgb(194, 65, 12)');
-    expect(color('Over 7 days')).toBe('rgb(185, 28, 28)');
-    expect(color('Waiting for review')).toBe('rgb(77, 124, 15)');
+    expect(color('1–3 days')).toBe('rgb(255, 153, 0)'); // orange #ff9900
+    expect(color('3–7 days')).toBe('rgb(231, 73, 0)'); // red-orange #e74900
+    expect(color('Over 7 days')).toBe('rgb(255, 1, 1)'); // red #ff0101
+    expect(color('Waiting for review')).toBe('rgb(255, 196, 0)'); // yellow #ffc400
     expect(color('Completed in range')).toBe('var(--sf-ok)');
     expect(color('Rework rate')).toBe('var(--sf-danger)');
     expect(color('Average time to outcome')).toBe(''); // no data

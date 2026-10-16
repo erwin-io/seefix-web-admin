@@ -116,7 +116,7 @@ mat-nav-list a {
   height: 32px;
   border-radius: 50%;
   background: var(--sf-accent-soft);
-  color: var(--sf-accent);
+  color: var(--sf-info); // darker blue: --sf-accent on accent-soft was 4.48:1 (axe color-contrast)
   font-size: 13px;
   font-weight: 700;
   margin-right: 8px;

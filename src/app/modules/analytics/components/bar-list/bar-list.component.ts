@@ -29,7 +29,8 @@ import { TONE_COLOR, Tone } from '../../tones';
   styles: `
     h3 { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--sf-muted); }
     ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-    li { display: grid; grid-template-columns: minmax(90px, 40%) 1fr auto; gap: 8px; align-items: center; font-size: 13px; }
+    /* Label column: up to 40% of the list but at most 200px (full-width lists had a huge gap); same for every row, so bars align. */
+    li { display: grid; grid-template-columns: minmax(90px, min(40%, 200px)) 1fr auto; gap: 8px; align-items: center; font-size: 13px; }
     li:hover .bar { filter: brightness(0.85); }
     .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .track { height: 10px; }

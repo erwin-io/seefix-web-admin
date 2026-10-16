@@ -76,10 +76,10 @@
         <h3 id="a-queue">Review queue now</h3>
         <p class="note">Reports waiting for human review today, by age. Not limited to the date range.</p>
         <div class="tiles">
-          <app-stat-card label="Waiting for review" [value]="q.total" tone="lime" />
+          <app-stat-card label="Waiting for review" [value]="q.total" tone="yellow" />
           <app-stat-card label="Under 1 day" [value]="q.under1d" tone="yellow" />
-          <app-stat-card label="1–3 days" [value]="q.d1to3" tone="amber" />
-          <app-stat-card label="3–7 days" [value]="q.d3to7" tone="orange" />
+          <app-stat-card label="1–3 days" [value]="q.d1to3" tone="orange" />
+          <app-stat-card label="3–7 days" [value]="q.d3to7" tone="redOrange" />
           <app-stat-card label="Over 7 days" [value]="q.over7d" [alert]="true" tone="red" />
         </div>
       </section>
