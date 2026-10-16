@@ -1,0 +1,205 @@
+<section
+  class="panel"
+  [class.mobile]="mobile()"
+  role="dialog"
+  aria-modal="false"
+  aria-labelledby="sf-assistant-title"
+  aria-describedby="sf-assistant-scope"
+  [cdkTrapFocus]="mobile()"
+  (keydown.escape)="store.minimize()"
+>
+  <header class="head">
+    <mat-icon aria-hidden="true">smart_toy</mat-icon>
+    <div class="head-text">
+      <h2 id="sf-assistant-title">SEEFIX Assistant</h2>
+      <small id="sf-assistant-scope">Advisory answers for your {{ roleLabel() }} access</small>
+    </div>
+    <button
+      mat-icon-button
+      type="button"
+      aria-label="Minimize assistant"
+      (click)="store.minimize()"
+    >
+      <mat-icon>remove</mat-icon>
+    </button>
+    <button mat-icon-button type="button" aria-label="Close assistant" (click)="store.close()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </header>
+
+  @if (!store.online()) {
+    <p class="banner warn" role="status">
+      You're offline. Questions will fail until your connection is back.
+    </p>
+  }
+  @if (store.availability() === 'error') {
+    <p class="banner warn" role="status">
+      {{ store.catalogError() }}
+      <button mat-button type="button" (click)="store.open()">Retry</button>
+    </p>
+  }
+
+  <mat-tab-group
+    class="tabs"
+    mat-stretch-tabs
+    animationDuration="0ms"
+    [selectedIndex]="tabIndex()"
+    (selectedIndexChange)="selectTab($event)"
+  >
+    <mat-tab label="Chat">
+      <div class="chat">
+        <div #log class="log" role="log" aria-label="Conversation" aria-live="off" tabindex="0">
+          @if (store.hints().length) {
+            <details class="hints" open>
+              <summary>From your queue <span class="tag">hint only</span></summary>
+              <p class="muted">
+                Not a decision. Open the record to check its current state before acting.
+              </p>
+              <ul>
+                @for (h of store.hints(); track h.entityType + h.entityId + h.action) {
+                  <li>
+                    <button mat-button type="button" class="hint" (click)="store.go(h.route)">
+                      <strong>{{ h.reference ?? (h.entityType | humanize) }}</strong>
+                      <span>{{ h.action | humanize }}{{ h.summary ? ' · ' + h.summary : '' }}</span>
+                      @if (h.dueAt) {
+                        <small>Due {{ h.dueAt | date: 'MMM d, h:mm a' }}</small>
+                      }
+                    </button>
+                  </li>
+                }
+              </ul>
+            </details>
+          } @else if (store.hintsError()) {
+            <p class="muted">Queue hints are unavailable: {{ store.hintsError() }}</p>
+          }
+
+          @for (m of store.messages(); track m.id) {
+            @if (m.role === 'user') {
+              <div class="msg user"><span class="sr">You asked:</span>{{ m.text }}</div>
+            } @else {
+              <div
+                class="msg bot"
+                [class.error]="m.status === 'error'"
+                [attr.aria-busy]="m.status === 'pending'"
+              >
+                <span class="sr">Assistant:</span>
+                @switch (m.status) {
+                  @case ('pending') {
+                    <span class="thinking"
+                      ><mat-spinner diameter="16" aria-hidden="true" /> Thinking…</span
+                    >
+                  }
+                  @case ('error') {
+                    <span>{{ m.text }}</span>
+                    <button
+                      mat-button
+                      type="button"
+                      (click)="store.retry(m.id)"
+                      [disabled]="full()"
+                    >
+                      Retry
+                    </button>
+                  }
+                  @default {
+                    @if (m.response?.status === 'FALLBACK') {
+                      <p class="note">
+                        The AI model was unavailable, so this is a direct list from your data.
+                      </p>
+                    } @else if (m.response?.status === 'NO_FACTS') {
+                      <p class="note">No matching data was found for your access.</p>
+                    }
+                    <p class="answer">{{ m.text }}</p>
+                    @if (m.response?.navigation?.length) {
+                      <div class="links" role="group" aria-label="Open a related page">
+                        @for (n of m.response!.navigation; track n.factId) {
+                          <button mat-stroked-button type="button" (click)="store.go(n.path)">
+                            <mat-icon>open_in_new</mat-icon>{{ n.label }}
+                          </button>
+                        }
+                      </div>
+                    }
+                    @if (canDraft()) {
+                      <button mat-button type="button" class="draft-btn" (click)="useAsDraft(m)">
+                        <mat-icon>edit_note</mat-icon>Start a private draft from this
+                      </button>
+                    }
+                  }
+                }
+              </div>
+            }
+          } @empty {
+            <div class="empty">
+              <p>
+                Ask about your workload, queue or trends. Answers only use data your role can see.
+              </p>
+              <div class="suggest">
+                @for (s of suggestions; track s) {
+                  <button mat-stroked-button type="button" (click)="ask(s)">{{ s }}</button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+        <form class="composer" (ngSubmit)="submit()">
+          @if (recordName()) {
+            <mat-checkbox
+              [checked]="store.useContext()"
+              (change)="store.useContext.set($event.checked)"
+            >
+              Ask about {{ recordName() }}
+            </mat-checkbox>
+          }
+          <div class="row">
+            <label class="sr" for="sf-assistant-q">Message the assistant</label>
+            <textarea
+              #question
+              id="sf-assistant-q"
+              name="question"
+              rows="2"
+              maxlength="1000"
+              placeholder="Ask a question…"
+              [ngModel]="draft()"
+              (ngModelChange)="draft.set($event)"
+              (keydown)="onKey($event)"
+            ></textarea>
+            <button
+              mat-icon-button
+              type="submit"
+              aria-label="Send"
+              [disabled]="!draft().trim() || full()"
+            >
+              <mat-icon>send</mat-icon>
+            </button>
+          </div>
+          <p class="foot">
+            @if (full()) {
+              Waiting for {{ maxPending }} answers…
+            } @else {
+              AI answers are advisory. Decisions stay with you on each record's page.
+            }
+            @if (store.messages().length) {
+              <button mat-button type="button" class="clear" (click)="store.clear()">
+                Clear chat
+              </button>
+            }
+          </p>
+        </form>
+      </div>
+    </mat-tab>
+
+    <mat-tab label="This record" [disabled]="!store.context()">
+      <ng-template matTabContent>
+        @if (store.context(); as ctx) {
+          <app-assistant-record [context]="ctx" />
+        }
+      </ng-template>
+    </mat-tab>
+
+    <mat-tab label="Reminders">
+      <ng-template matTabContent>
+        <app-assistant-reminders />
+      </ng-template>
+    </mat-tab>
+  </mat-tab-group>
+</section>

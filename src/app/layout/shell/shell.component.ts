@@ -20,6 +20,7 @@ import { NotificationService } from '@app/core/notifications/notification.servic
 import { SpotlightLauncherComponent } from '../spotlight/spotlight-launcher.component';
 import { UiService } from '@app/shared/services/ui.service';
 import { entityLink } from '@app/shared/utils/entity-link';
+import { AssistantLauncherComponent } from '../assistant/assistant-launcher.component';
 
 interface NavItem {
   label: string;
@@ -45,6 +46,7 @@ const NAV: NavItem[] = [
   imports: [
     RouterOutlet, RouterLink, RouterLinkActive, DatePipe, MatSidenavModule, MatToolbarModule, MatListModule,
     MatIconModule, MatButtonModule, MatBadgeModule, MatMenuModule, MatTooltipModule, SpotlightLauncherComponent,
+    AssistantLauncherComponent,
   ],
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.scss',

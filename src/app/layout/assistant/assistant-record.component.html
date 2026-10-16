@@ -1,0 +1,142 @@
+<div class="record">
+  <header>
+    @if (fact(); as f) {
+      <h3>{{ f.label }}</h3>
+      <span class="muted">{{ f.data['status'] | humanize }}</span>
+    } @else if (factError()) {
+      <p class="problem" role="alert">{{ factError() }}</p>
+    } @else {
+      <span class="muted">Loading record…</span>
+    }
+    <button mat-icon-button type="button" aria-label="Refresh record" (click)="reload()">
+      <mat-icon>refresh</mat-icon>
+    </button>
+  </header>
+
+  <div class="live" role="status" aria-live="polite">{{ done() }}</div>
+  @if (problem()) {
+    <p class="problem" role="alert">{{ problem() }}</p>
+  }
+
+  @if (canDraft()) {
+    <section aria-labelledby="sf-drafts-h">
+      <h4 id="sf-drafts-h">Private {{ draftKind().label }} draft</h4>
+      <p class="muted">
+        Drafts are only text for you. Nothing is submitted: paste it into the form on the record
+        page and submit it there.
+      </p>
+      <label class="sr" for="sf-draft-text">Draft text</label>
+      <textarea
+        id="sf-draft-text"
+        rows="4"
+        maxlength="8000"
+        [ngModel]="draftText()"
+        (ngModelChange)="setDraft($event)"
+        placeholder="Write or start from an assistant answer…"
+      ></textarea>
+      <div class="actions">
+        <button
+          mat-flat-button
+          type="button"
+          (click)="saveDraft()"
+          [disabled]="!draftText().trim() || busy()"
+        >
+          Save draft…
+        </button>
+      </div>
+      @for (d of drafts(); track d.id) {
+        <article class="draft">
+          <p>{{ d.body }}</p>
+          <footer>
+            <small class="muted">Saved {{ d.updatedAt | date: 'MMM d, h:mm a' }}</small>
+            <button mat-button type="button" (click)="copy(d)">
+              <mat-icon>content_copy</mat-icon>Copy
+            </button>
+            <button mat-button type="button" (click)="discard(d)" [disabled]="busy()">
+              Discard…
+            </button>
+          </footer>
+        </article>
+      }
+    </section>
+  }
+
+  @if (showReassess()) {
+    <section aria-labelledby="sf-reassess-h">
+      <h4 id="sf-reassess-h">AI reassessment</h4>
+      @if (activeJob(); as job) {
+        <div class="job active" role="status">
+          <mat-spinner diameter="18" aria-hidden="true" />
+          <div>
+            <strong>{{ jobStatus[job.status].label }}</strong>
+            <p class="muted">{{ jobStatus[job.status].detail }}</p>
+          </div>
+          <button mat-button type="button" (click)="cancelJob(job.id)" [disabled]="busy()">
+            Cancel…
+          </button>
+        </div>
+      } @else if (ineligible()) {
+        <p class="muted">{{ ineligible() }}</p>
+      } @else {
+        <p class="muted">
+          Queue a new AI assessment if the current one looks wrong. Your review stays open and the
+          current assessment remains until the new one is ready.
+        </p>
+        <button
+          mat-stroked-button
+          type="button"
+          (click)="requestReassessment()"
+          [disabled]="busy()"
+        >
+          <mat-icon>autorenew</mat-icon>Request new AI assessment…
+        </button>
+      }
+
+      @if (history(); as h) {
+        @if (h.jobs.length) {
+          <h5>Requests</h5>
+          <ul class="history">
+            @for (j of h.jobs; track j.id) {
+              <li>
+                <strong>{{ jobStatus[j.status].label }}</strong>
+                <small class="muted"
+                  >{{ j.createdAt | date: 'MMM d, h:mm a' }} · attempts {{ j.attemptCount }}</small
+                >
+                <span>{{ j.reason }}</span>
+                @if (
+                  j.status === 'FAILED' || j.status === 'CANCELLED' || j.status === 'SUPERSEDED'
+                ) {
+                  <small class="muted">{{ jobStatus[j.status].detail }}</small>
+                }
+              </li>
+            }
+          </ul>
+        }
+        @if (h.assessments.length) {
+          <h5>Assessment attempts</h5>
+          <ul class="history">
+            @for (a of h.assessments; track a.attempt) {
+              <li>
+                <strong>Attempt {{ a.attempt }}</strong>
+                <small class="muted">{{ a.createdAt | date: 'MMM d, h:mm a' }}</small>
+                <span
+                  >{{ a.category | humanize }} · {{ a.urgency | humanize
+                  }}{{
+                    a.priorityScore !== null && a.priorityScore !== undefined
+                      ? ' · priority ' + a.priorityScore
+                      : ''
+                  }}</span
+                >
+              </li>
+            }
+          </ul>
+        }
+      }
+    </section>
+  }
+
+  <p class="muted boundary">
+    The assistant never reviews, routes, authorizes, completes, sends back for rework or buys
+    anything. Those decisions stay on the record's own page.
+  </p>
+</div>
