@@ -22,3 +22,9 @@ details { margin: 8px 0 12px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 table.plain { width: 100%; border-collapse: collapse; font-size: 13px; }
 table.plain th, table.plain td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--sf-border); }
+.banner.moving { color: #6d28d9; align-items: center; background: rgb(109 40 217 / 6%); }
+.banner.moving span { color: var(--sf-text); }
+.hint { margin: 0 0 8px; }
+.vertices tr.moving td { background: rgb(109 40 217 / 8%); }
+.vertices tr.moving input { border-color: #6d28d9; }
+button.active { color: #6d28d9; }

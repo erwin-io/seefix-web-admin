@@ -88,3 +88,34 @@ describe('ReportDetailPage review decision', () => {
     expect(await submitAndCapture(page)).toEqual({ decision: 'DUPLICATE', notes: undefined, decisionReason: 'Same leak', duplicateReportId: 'r0' });
   });
 });
+
+describe('ReportDetailPage map location', () => {
+  async function render(role: string) {
+    TestBed.configureTestingModule({
+      imports: [ReportDetailPage],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+    });
+    TestBed.inject(SessionService).user.set({ id: 'u', role } as never);
+    const http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(ReportDetailPage);
+    fixture.componentRef.setInput('id', 'r1');
+    fixture.detectChanges();
+    http.match('/api/reference/categories').forEach((r) => r.flush({ items: [] }));
+    http.expectOne('/api/reports/r1').flush(DETAIL);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return { http, el: fixture.nativeElement as HTMLElement };
+  }
+
+  it('shows the report on its own map for campus-map roles', async () => {
+    const { http, el } = await render('MAINTENANCE_SUPERVISOR');
+    expect(el.querySelector('app-report-location')).not.toBeNull();
+    http.expectOne('/api/map/reports/r1');
+  });
+
+  it('does not show it (or call the map API) for Procurement', async () => {
+    const { http, el } = await render('PROCUREMENT');
+    expect(el.querySelector('app-report-location')).toBeNull();
+    http.expectNone('/api/map/reports/r1');
+  });
+});

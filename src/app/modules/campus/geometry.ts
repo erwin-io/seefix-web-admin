@@ -1,4 +1,4 @@
-import { LatLng, MapMarker, MarkerLocation } from './campus.models';
+import { CampusArea, LatLng, MapMarker, MarkerLocation } from './campus.models';
 
 /** Same limits as seefix-api `validatePerimeter` / the building PATCH. */
 export const MIN_VERTICES = 3;
@@ -72,14 +72,21 @@ export const round6 = (n: number) => Math.round(n * 1e6) / 1e6;
 export const wrapLng = (lng: number) => ((((lng + 180) % 360) + 360) % 360) - 180;
 
 export const SOURCE_LABEL: Record<MarkerLocation['source'], string> = {
+  CORRECTED: 'Set by maintenance',
   GPS: 'Submitted GPS',
-  BUILDING_DEFAULT: 'Building default pin',
+  BUILDING_DEFAULT: 'Building location',
   NONE: 'Not pinned',
 };
 
 /** Why the pin is where it is, in words (from the API's `gpsCheck`; nothing is recomputed here). */
 export function provenance(loc: MarkerLocation): string {
+  if (loc.source === 'CORRECTED') {
+    const c = loc.correction;
+    const how = c?.source === 'BUILDING' ? "the building's location" : 'a point picked by maintenance';
+    return `Shown at ${how}${c?.updatedBy ? ` (${c.updatedBy})` : ''}${c?.reason ? `: ${c.reason}` : ''}. Raw GPS is unchanged`;
+  }
   const d = loc.gpsDistanceMeters;
+  const where = loc.defaultFrom === 'PERIMETER_CENTER' ? "the centre of the building's outline" : "the building's default pin";
   switch (loc.gpsCheck) {
     case 'INSIDE':
       return 'GPS is inside the building perimeter';
@@ -91,16 +98,38 @@ export function provenance(loc: MarkerLocation): string {
       return 'GPS shown as submitted: no linked building';
     case 'OUTSIDE':
       return loc.source === 'BUILDING_DEFAULT'
-        ? `GPS is ${d ?? '?'} m outside the building perimeter; shown at the building's default pin`
-        : `GPS is ${d ?? '?'} m outside the building perimeter and the building has no default pin`;
+        ? `GPS is ${d ?? '?'} m outside the building perimeter; shown at ${where}`
+        : `GPS is ${d ?? '?'} m outside the building perimeter and the building has no location`;
     case 'NO_GPS':
-      return loc.source === 'BUILDING_DEFAULT' ? "No GPS submitted; shown at the building's default pin" : 'No GPS submitted and no default pin';
+      return loc.source === 'BUILDING_DEFAULT' ? `No GPS submitted; shown at ${where}` : 'No GPS submitted and no building location to show it at';
   }
 }
 
 /** Raw coordinates exactly as stored, or a clear "none". */
 export function rawGpsText(loc: MarkerLocation): string {
   return loc.rawGps ? `${loc.rawGps.lat}, ${loc.rawGps.lng}` : 'No GPS submitted';
+}
+
+const EARTH_M = 6371008.8;
+const rad = (d: number) => (d * Math.PI) / 180;
+
+/** Straight-line metres between two points (campus scale, equirectangular). */
+export function metresBetween(a: LatLng, b: LatLng): number {
+  const x = rad(b[1] - a[1]) * Math.cos(rad((a[0] + b[0]) / 2)) * EARTH_M;
+  const y = rad(b[0] - a[0]) * EARTH_M;
+  return Math.hypot(x, y);
+}
+
+/** South-west / north-east corners of the square around the campus circle (the map's pan limit). */
+export function campusBounds(c: CampusArea): [LatLng, LatLng] {
+  const dLat = (c.radiusMeters / EARTH_M) * (180 / Math.PI);
+  const dLng = dLat / Math.cos(rad(c.centerLat));
+  return [[c.centerLat - dLat, c.centerLng - dLng], [c.centerLat + dLat, c.centerLng + dLng]];
+}
+
+/** Same check as the API's OUTSIDE_CAMPUS: further than the radius from the centre. */
+export function outsideCampus(c: CampusArea, p: LatLng): boolean {
+  return metresBetween([c.centerLat, c.centerLng], p) > c.radiusMeters;
 }
 
 export function pinned(m: MapMarker): boolean {

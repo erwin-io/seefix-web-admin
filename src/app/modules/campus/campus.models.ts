@@ -60,8 +60,8 @@ export interface MapBuilding {
   counts: { reports: number; workOrders: number };
 }
 
-/** Where the pin is drawn: submitted GPS, the building's default pin, or not pinned (table only). */
-export type LocationSource = 'GPS' | 'BUILDING_DEFAULT' | 'NONE';
+/** Where the pin is drawn: saved by maintenance, submitted GPS, the building's location, or not pinned (table only). */
+export type LocationSource = 'CORRECTED' | 'GPS' | 'BUILDING_DEFAULT' | 'NONE';
 export type GpsCheck = 'INSIDE' | 'WITHIN_TOLERANCE' | 'OUTSIDE' | 'NO_GPS' | 'NO_PERIMETER' | 'NO_BUILDING';
 
 export interface MarkerLocation {
@@ -72,6 +72,10 @@ export interface MarkerLocation {
   rawGps: { lat: number; lng: number } | null;
   gpsCheck: GpsCheck;
   gpsDistanceMeters?: number;
+  /** BUILDING_DEFAULT: the building's pin, or the centre of its perimeter when it has no pin. */
+  defaultFrom?: 'PIN' | 'PERIMETER_CENTER';
+  /** CORRECTED: who saved the map location and why (raw GPS is unchanged). */
+  correction?: { source: 'MANUAL' | 'BUILDING'; reason: string | null; updatedAt: string | null; updatedBy: string | null };
 }
 
 export interface MapMarker {
@@ -89,7 +93,46 @@ export interface MapMarker {
   route: string;
 }
 
+/** Campus map area (`campus` of GET /api/map, GET/PUT /api/admin/campus-settings): the map stays inside it. */
+export interface CampusArea {
+  centerLat: number;
+  centerLng: number;
+  radiusMeters: number;
+  /** Furthest the map can zoom out. */
+  minZoom: number;
+  /** true until an admin saves the settings. */
+  isDefault?: boolean;
+}
+
 export interface MapResponse {
   buildings: MapBuilding[];
   markers: MapMarker[];
+  campus?: CampusArea;
+}
+
+/** "Use building location": the linked building, or the one building whose name loosely matches (never AI). */
+export interface LocationSuggestion {
+  lat: number;
+  lng: number;
+  buildingId: string;
+  buildingName: string;
+  basis: 'LINKED_BUILDING' | 'SIMILAR_NAME';
+}
+
+/** GET /api/map/reports/:id (and the PUT/DELETE …/location answers): one report, no other markers. */
+export interface ReportLocation {
+  report: { id: string; no: string; status: string; buildingText: string | null; buildingMatch: MapMarker['buildingMatch'] };
+  building: MapBuilding | null;
+  location: MarkerLocation;
+  suggestion: LocationSuggestion | null;
+  campus: CampusArea;
+  canCorrect: boolean;
+}
+
+export interface LocationChange {
+  lat: number;
+  lng: number;
+  source: 'MANUAL' | 'BUILDING';
+  buildingId?: string;
+  reason?: string;
 }

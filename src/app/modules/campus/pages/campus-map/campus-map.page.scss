@@ -26,3 +26,5 @@
   border-bottom: 1px solid var(--sf-border); background: none; cursor: pointer; text-align: left; font: inherit; color: inherit; }
 .building-row:hover, .building-row:focus-visible { color: var(--sf-accent); }
 .table-title { font-size: 15px; font-weight: 600; margin: 0 0 8px; }
+.live { display: flex; align-items: center; gap: 6px; margin: -4px 0 10px; font-size: 12px; color: var(--sf-muted); }
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: #16a34a; box-shadow: 0 0 0 3px rgb(22 163 74 / 20%); }

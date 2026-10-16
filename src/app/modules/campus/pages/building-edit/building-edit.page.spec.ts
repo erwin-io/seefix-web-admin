@@ -46,6 +46,8 @@ describe('building PATCH body', () => {
   });
 });
 
+const CAMPUS = { centerLat: 14.6005, centerLng: 121.0005, radiusMeters: 600, minZoom: 16 };
+
 describe('BuildingEditPage', () => {
   async function setup() {
     const fake = new FakeLeaflet();
@@ -59,15 +61,56 @@ describe('BuildingEditPage', () => {
     await fixture.whenStable();
     const list = (items: Building[]) => http.expectOne((r) => r.url === '/api/admin/buildings' && r.method === 'GET').flush({ items });
     const history = () => http.expectOne('/api/admin/buildings/b1/geometry-history').flush({ items: [] });
+    http.expectOne('/api/admin/campus-settings').flush({ campus: CAMPUS, updatedAt: null, updatedBy: null });
     list([building()]);
     await settle(fixture);
     history();
     await settle(fixture);
-    return { http, fixture, page: fixture.componentInstance, el: fixture.nativeElement as HTMLElement, list, history };
+    return { http, fixture, fake, page: fixture.componentInstance, el: fixture.nativeElement as HTMLElement, list, history };
   }
+
+  it('moves one point by dragging it on the map; the coordinates follow and stray clicks add nothing', async () => {
+    const { fixture, fake, page, el, http } = await setup();
+    expect(fake.map!.minZoom).toBe(16); // campus area applied to the editor map
+    page.toggleMove(1);
+    await settle(fixture);
+    expect(el.querySelector('[data-banner="moving"]')?.textContent).toContain('Moving point 2');
+    expect(fake.handles).toHaveLength(1);
+    const handle = fake.handles[0];
+    handle.dragTo([14.60111, 121.00222]);
+    await settle(fixture);
+    expect(page.form().perimeter[1]).toEqual([14.60111, 121.00222]);
+    const lat = el.querySelector<HTMLInputElement>('input[aria-label="Point 2 latitude"]')!;
+    expect(lat.valueAsNumber).toBe(14.60111);
+
+    page.clickMode.set('vertex');
+    page.mapClick([14.7, 121.1]); // while moving, a click never adds a point
+    expect(page.form().perimeter).toHaveLength(PERIMETER.length);
+
+    page.removeVertex(0); // removing an earlier point keeps the same point selected
+    expect(page.moving()).toBe(0);
+    page.toggleMove(0);
+    expect(page.moving()).toBeNull();
+    expect(page.changes()).toEqual({ perimeter: [[14.60111, 121.00222], PERIMETER[2]], geometryRevision: 2 });
+    http.verify();
+  });
+
+  it('moves the default pin by dragging', async () => {
+    const { fixture, fake, page, el } = await setup();
+    el.querySelector<HTMLButtonElement>('[data-action="move-pin"]')!.click();
+    await settle(fixture);
+    expect(page.moving()).toBe('pin');
+    fake.handles.at(-1)!.dragTo([14.6007, 121.0003]);
+    await settle(fixture);
+    expect([page.form().defaultLat, page.form().defaultLng]).toEqual([14.6007, 121.0003]);
+  });
 
   it('handles 409 GEOMETRY_CONFLICT: nothing saved, latest revision shown, then re-saved on purpose', async () => {
     const { http, fixture, page, el, list, history } = await setup();
+    expect(page.clickMode()).toBeNull(); // an outlined building opens in "Pan only": a stray click adds nothing
+    page.mapClick([14.6, 121.0]);
+    expect(page.form().perimeter).toEqual(PERIMETER);
+    page.clickMode.set('vertex');
     page.mapClick([14.6012345678, 121.0004]); // adds a 4th perimeter point (rounded to 6 decimals)
     page.patch({ name: 'Old Building Annex' });
     const saving = page.save();

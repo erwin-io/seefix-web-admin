@@ -10,6 +10,11 @@
     <button mat-stroked-button (click)="data.reload()" [disabled]="data.loading()"><mat-icon>refresh</mat-icon>Refresh</button>
   </div>
 </div>
+@if (data.loadedAt() && !sync.offline()) {
+  <p class="live" role="status" data-live>
+    <span class="live-dot" aria-hidden="true"></span>Live · checks for changes every 15 s · updated {{ data.loadedAt() | date: 'h:mm:ss a' }}
+  </p>
+}
 
 <div class="filters" role="group" aria-label="Map filters">
   <mat-form-field subscriptSizing="dynamic">
@@ -80,10 +85,20 @@
     <span>Map background tiles aren't loading. Building outlines and pins still show; the table below lists everything.</span>
   </div>
 }
+@if (noLocation(); as name) {
+  <div class="banner info" role="status" data-banner="no-location">
+    <mat-icon>wrong_location</mat-icon>
+    <span>{{ name }} has no outline or pin yet, so the map can't centre on it.
+      @if (session.has('ADMIN')) { Add one in Building settings. }</span>
+  </div>
+}
 @if (unpinned()) {
   <div class="banner info" role="status" data-banner="unpinned">
     <mat-icon>location_off</mat-icon>
-    <span>{{ unpinned() }} shown item{{ unpinned() === 1 ? ' has' : 's have' }} no map position (no usable GPS and no building default pin). They're in the table.</span>
+    <span>
+      {{ unpinned() }} shown item{{ unpinned() === 1 ? ' has' : 's have' }} no map position (no usable GPS and no building location). They're in the
+      table: open the report and use <strong>Map location</strong> to place it.
+    </span>
   </div>
 }
 
@@ -97,6 +112,7 @@
       [markers]="filtered()"
       [selected]="selectedKey()"
       [focusBuilding]="filter().buildingId"
+      [campus]="area()"
       (markerClick)="select($event)"
       (buildingClick)="openBuilding($event)"
       label="Campus map of active reports and work orders"
@@ -104,8 +120,8 @@
     <ul class="legend" aria-label="Map legend">
       <li><span class="dot solid" [style.background]="kindColor.REPORT"></span>Report</li>
       <li><span class="dot solid" [style.background]="kindColor.WORK_ORDER"></span>Work order</li>
-      <li><span class="dot solid neutral"></span>Filled: at submitted GPS</li>
-      <li><span class="dot ring"></span>Hollow, dashed: at building default pin</li>
+      <li><span class="dot solid neutral"></span>Filled: at submitted GPS, or set by maintenance</li>
+      <li><span class="dot ring"></span>Hollow, dashed: at the building's location</li>
     </ul>
   </div>
 
@@ -140,7 +156,7 @@
         </p>
         <p class="muted">
           {{ b.perimeter ? 'Perimeter set, ' + b.toleranceMeters + ' m tolerance' : 'No perimeter: GPS is shown as submitted' }}.
-          {{ b.defaultLat !== null ? 'Has a default pin.' : 'No default pin.' }}
+          {{ b.defaultLat !== null ? 'Has a default pin.' : b.perimeter ? 'No default pin: reports without GPS show at the outline centre.' : 'No default pin.' }}
         </p>
         @if (session.has('ADMIN')) {
           <a mat-button [routerLink]="['/admin/buildings', b.id]"><mat-icon>edit_location_alt</mat-icon>Edit building</a>

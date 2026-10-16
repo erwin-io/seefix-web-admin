@@ -8,15 +8,16 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { firstValueFrom, of } from 'rxjs';
 import { useDataset } from '@app/core/data/dataset.store';
 import { toAppError } from '@app/core/http/app-error';
 import { load } from '@app/core/utils/load';
 import { PageStateComponent } from '@app/shared/components/page-state/page-state.component';
 import { UiService } from '@app/shared/services/ui.service';
-import { Building, BuildingChanges, LatLng } from '../../campus.models';
+import { Building, BuildingChanges, CampusArea, LatLng } from '../../campus.models';
 import { BUILDINGS, CampusService } from '../../campus.service';
-import { BuildingShape, CampusMapViewComponent, GeometryDraft } from '../../components/campus-map-view/campus-map-view.component';
+import { BuildingShape, CampusMapViewComponent, DraftMove, GeometryDraft } from '../../components/campus-map-view/campus-map-view.component';
 import { MAX_TOLERANCE_M, MAX_VERTICES, parsePoints, perimeterError, pinError, round6, toleranceError, wrapLng } from '../../geometry';
 
 export interface BuildingForm {
@@ -100,7 +101,7 @@ type ClickMode = 'vertex' | 'pin' | null;
   selector: 'app-building-edit-page',
   imports: [
     DatePipe, FormsModule, RouterLink, MatButtonModule, MatButtonToggleModule, MatCheckboxModule, MatFormFieldModule, MatIconModule,
-    MatInputModule, PageStateComponent, CampusMapViewComponent,
+    MatInputModule, MatTooltipModule, PageStateComponent, CampusMapViewComponent,
   ],
   templateUrl: './building-edit.page.html',
   styleUrl: './building-edit.page.scss',
@@ -128,7 +129,12 @@ export class BuildingEditPage {
   readonly saveError = signal<string | null>(null);
   /** 409 GEOMETRY_CONFLICT: the latest server copy, once reloaded (null while loading or not found). */
   readonly conflict = signal<{ latest: Building | null } | null>(null);
+  /** What a map click does. "Pan only" (null) by default once a perimeter exists, so a stray click adds nothing. */
   readonly clickMode = signal<ClickMode>('vertex');
+  /** The one point that can be dragged on the map (a perimeter index or the pin); null: none. */
+  readonly moving = signal<number | 'pin' | null>(null);
+  /** Campus map area: keeps this map inside the campus (admin endpoint; null on an older API). */
+  readonly campusArea = signal<CampusArea | null>(null);
   readonly pasteText = signal('');
   readonly pasteError = signal<string | null>(null);
   readonly missing = computed(() => !this.creating() && !!this.list.loadedAt() && !this.list.rows().some((b) => b.id === this.id()));
@@ -136,7 +142,11 @@ export class BuildingEditPage {
   readonly others = computed<BuildingShape[]>(() => this.list.rows().filter((b) => b.id !== this.id()));
   readonly draft = computed<GeometryDraft>(() => {
     const f = this.form();
-    return { perimeter: f.perimeter, pin: f.defaultLat !== null && f.defaultLng !== null ? [f.defaultLat, f.defaultLng] : null };
+    return {
+      perimeter: f.perimeter,
+      pin: f.defaultLat !== null && f.defaultLng !== null ? [f.defaultLat, f.defaultLng] : null,
+      moving: this.moving(),
+    };
   });
 
   readonly history = load(() => {
@@ -145,6 +155,7 @@ export class BuildingEditPage {
   });
 
   constructor() {
+    this.campus.campusSettings().subscribe({ next: (r) => this.campusArea.set(r.campus), error: () => this.campusArea.set(null) });
     // Open the form once from the loaded list (later list refreshes never overwrite unsaved edits).
     effect(() => {
       const id = this.id();
@@ -168,18 +179,34 @@ export class BuildingEditPage {
   }
 
   removeVertex(i: number): void {
+    const m = this.moving();
+    if (typeof m === 'number') this.moving.set(m === i ? null : m > i ? m - 1 : m);
     this.form.update((f) => ({ ...f, perimeter: f.perimeter.filter((_, j) => j !== i) }));
   }
 
   clearPerimeter(): void {
+    if (typeof this.moving() === 'number') this.moving.set(null);
     this.patch({ perimeter: [] });
   }
 
   clearPin(): void {
+    if (this.moving() === 'pin') this.moving.set(null);
     this.patch({ defaultLat: null, defaultLng: null });
   }
 
+  /** Make one point draggable on the map (pressing again, or Done, stops). Map clicks add nothing meanwhile. */
+  toggleMove(target: number | 'pin'): void {
+    this.moving.set(this.moving() === target ? null : target);
+  }
+
+  /** A drag on the map: the point's latitude and longitude follow it live. */
+  draftMoved({ target, point }: DraftMove): void {
+    if (target === 'pin') this.patch({ defaultLat: point[0], defaultLng: point[1] });
+    else this.form.update((f) => ({ ...f, perimeter: f.perimeter.map((p, i) => (i === target ? point : p)) }));
+  }
+
   mapClick([lat, lng]: LatLng): void {
+    if (this.moving() !== null) return; // moving a point: a click on the map must not also add one
     const p: LatLng = [round6(lat), round6(wrapLng(lng))];
     if (this.clickMode() === 'pin') this.patch({ defaultLat: p[0], defaultLng: p[1] });
     else if (this.clickMode() === 'vertex' && this.form().perimeter.length < MAX_VERTICES) this.patch({ perimeter: [...this.form().perimeter, p] });
@@ -239,6 +266,7 @@ export class BuildingEditPage {
     const theirs = formOf(latest);
     this.base.set(latest);
     this.form.set({ ...mine, ...pick(theirs, GEOMETRY_KEYS) });
+    this.moving.set(null);
     this.conflict.set(null);
   }
 
@@ -260,6 +288,9 @@ export class BuildingEditPage {
     this.base.set(b);
     this.form.set(formOf(b));
     this.conflict.set(null);
+    this.moving.set(null);
+    // An outlined building opens in "Pan only": points are added only after choosing "Add perimeter point".
+    this.clickMode.set(b.perimeter?.length ? null : 'vertex');
   }
 }
 

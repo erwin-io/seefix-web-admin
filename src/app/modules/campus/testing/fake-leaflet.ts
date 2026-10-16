@@ -6,6 +6,9 @@ type Handler = (e?: unknown) => void;
 export class FakeLeaflet {
   readonly circles: FakeLayer[] = [];
   readonly polygons: FakeLayer[] = [];
+  /** Draggable draft handles (L.marker) and campus circles (L.circle). */
+  readonly handles: FakeLayer[] = [];
+  readonly campusCircles: FakeLayer[] = [];
   tiles?: FakeLayer;
   map?: FakeLayer;
 
@@ -25,6 +28,18 @@ export class FakeLeaflet {
       polygon: (latlng: unknown, opts: unknown) => layer('polygon', latlng, opts),
       polyline: (latlng: unknown, opts: unknown) => layer('other', latlng, opts),
       latLngBounds: (pts: unknown) => ({ pts }),
+      marker: (latlng: unknown, opts: unknown) => {
+        const l = new FakeLayer(latlng, opts);
+        this.handles.push(l);
+        return l;
+      },
+      divIcon: (opts: unknown) => opts,
+      circle: (latlng: unknown, opts: unknown) => {
+        const l = new FakeLayer(latlng, opts);
+        this.campusCircles.push(l);
+        return l;
+      },
+      DomEvent: { stopPropagation: () => undefined },
     };
     return api as unknown as typeof Leaflet;
   }
@@ -34,9 +49,14 @@ export class FakeLayer {
   readonly handlers = new Map<string, Handler>();
   children: FakeLayer[] = [];
   tooltip?: string;
+  /** Map state recorded by the fake (map layer only). */
+  minZoom?: number;
+  maxBounds?: unknown;
+  view?: { center: unknown; zoom: unknown };
+  fitted?: unknown;
 
   constructor(
-    readonly latlng?: unknown,
+    public latlng?: unknown,
     public opts?: unknown,
   ) {}
 
@@ -64,15 +84,40 @@ export class FakeLayer {
     return this;
   }
   getLatLng() {
-    return this.latlng;
+    const [lat, lng] = this.latlng as [number, number];
+    return Object.assign([lat, lng], { lat, lng });
+  }
+  /** Test helper: move a draggable handle like a user drag would, firing its events. */
+  dragTo(point: [number, number]) {
+    this.fire('dragstart');
+    this.latlng = point;
+    this.fire('drag');
+    this.fire('dragend');
+  }
+  setLatLngs(pts: unknown) {
+    this.latlng = pts;
+    return this;
+  }
+  setMinZoom(z: number) {
+    this.minZoom = z;
+    return this;
+  }
+  setMaxBounds(b: unknown) {
+    this.maxBounds = b;
+    return this;
+  }
+  getZoom() {
+    return 17;
   }
   bringToFront() {
     return this;
   }
-  setView() {
+  setView(center?: unknown, zoom?: unknown) {
+    this.view = { center, zoom };
     return this;
   }
-  fitBounds() {
+  fitBounds(bounds?: unknown) {
+    this.fitted = bounds;
     return this;
   }
   panTo() {

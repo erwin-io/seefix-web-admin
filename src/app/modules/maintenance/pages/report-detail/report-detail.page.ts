@@ -10,9 +10,10 @@ import { MatRadioModule } from '@angular/material/radio';
 import { MatSelectModule } from '@angular/material/select';
 import { Observable, firstValueFrom } from 'rxjs';
 import { SessionService } from '@app/core/auth/session.service';
-import { MAINTENANCE } from '@app/core/models/user.model';
+import { MAINTENANCE, WORK_ROLES } from '@app/core/models/user.model';
 import { load } from '@app/core/utils/load';
 import { SHARED_IMPORTS } from '@app/shared/shared.imports';
+import { ReportLocationComponent } from '@app/modules/campus/components/report-location/report-location.component';
 import { humanize } from '@app/shared/pipes/humanize.pipe';
 import { UiService } from '@app/shared/services/ui.service';
 import { CategoryRef, Decision, URGENCIES } from '../../maintenance.models';
@@ -40,7 +41,7 @@ const DRAFT_FIELDS = [
   selector: 'app-report-detail-page',
   imports: [
     DatePipe, RouterLink, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule,
-    MatRadioModule, MatSelectModule, ...SHARED_IMPORTS,
+    MatRadioModule, MatSelectModule, ReportLocationComponent, ...SHARED_IMPORTS,
   ],
   templateUrl: './report-detail.page.html',
   styleUrl: './report-detail.page.scss',
@@ -62,6 +63,8 @@ export class ReportDetailPage {
   readonly r = computed(() => this.data.value()?.report ?? null);
   readonly mr = computed(() => this.data.value()?.maintenanceRequest ?? null);
   readonly isStaff = computed(() => this.session.has(...MAINTENANCE));
+  /** Campus map roles (the map API refuses Procurement and Reporters). */
+  readonly showsMap = computed(() => this.session.has(...WORK_ROLES));
   readonly risks = computed(() => RISKS.filter(([k]) => this.r()?.[k]).map(([, label]) => label));
   readonly photos = computed(() => this.data.value()?.images.map((i) => i.secureUrl) ?? []);
   readonly facility = computed(() => this.r()?.['ScopeDecision'] === 'Facility Issue');
