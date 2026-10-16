@@ -16,13 +16,17 @@
       }
     </mat-button-toggle-group>
     <form class="custom" (submit)="$event.preventDefault(); applyDraft()">
-      <mat-form-field subscriptSizing="dynamic">
-        <mat-label>From</mat-label>
-        <input matInput type="date" name="from" [value]="draft().from" (input)="setDraft('from', $any($event.target).value)" />
-      </mat-form-field>
-      <mat-form-field subscriptSizing="dynamic">
-        <mat-label>To</mat-label>
-        <input matInput type="date" name="to" [value]="draft().to" (input)="setDraft('to', $any($event.target).value)" />
+      <!-- Picker only (owner hotfix 15): the fields open the calendar and can't be typed into. -->
+      <mat-form-field subscriptSizing="dynamic" class="range">
+        <mat-label>From – To</mat-label>
+        <mat-date-range-input [rangePicker]="rangePicker" [max]="today">
+          <input matStartDate readonly name="from" placeholder="From" [value]="asDate(draft().from)"
+            (dateChange)="setDraft('from', iso($event.value))" (click)="rangePicker.open()" (keydown.enter)="rangePicker.open()" />
+          <input matEndDate readonly name="to" placeholder="To" [value]="asDate(draft().to)"
+            (dateChange)="setDraft('to', iso($event.value))" (click)="rangePicker.open()" (keydown.enter)="rangePicker.open()" />
+        </mat-date-range-input>
+        <mat-datepicker-toggle matIconSuffix [for]="rangePicker" aria-label="Open calendar" />
+        <mat-date-range-picker #rangePicker />
       </mat-form-field>
       <button mat-flat-button type="submit" [disabled]="!!draftError()">Apply</button>
     </form>
@@ -62,7 +66,7 @@
         </div>
         <div class="split">
           <app-day-chart [points]="r.perDay" [from]="overview()!.from" [to]="overview()!.to" />
-          <app-bar-list title="By current status" [counts]="r.byStatus" />
+          <app-bar-list title="By current status" [counts]="r.byStatus" [tone]="chartTone" />
           <app-bar-list title="By category" [counts]="r.byCategory" />
         </div>
       </section>
@@ -72,11 +76,11 @@
         <h3 id="a-queue">Review queue now</h3>
         <p class="note">Reports waiting for human review today, by age. Not limited to the date range.</p>
         <div class="tiles">
-          <app-stat-card label="Waiting for review" [value]="q.total" />
-          <app-stat-card label="Under 1 day" [value]="q.under1d" />
-          <app-stat-card label="1–3 days" [value]="q.d1to3" />
-          <app-stat-card label="3–7 days" [value]="q.d3to7" />
-          <app-stat-card label="Over 7 days" [value]="q.over7d" [alert]="true" />
+          <app-stat-card label="Waiting for review" [value]="q.total" tone="lime" />
+          <app-stat-card label="Under 1 day" [value]="q.under1d" tone="yellow" />
+          <app-stat-card label="1–3 days" [value]="q.d1to3" tone="amber" />
+          <app-stat-card label="3–7 days" [value]="q.d3to7" tone="orange" />
+          <app-stat-card label="Over 7 days" [value]="q.over7d" [alert]="true" tone="red" />
         </div>
       </section>
     }
@@ -84,24 +88,24 @@
       <section class="block" data-section="workOrders" aria-labelledby="a-wo">
         <h3 id="a-wo">Work orders</h3>
         <div class="tiles">
-          <app-stat-card label="Completed in range" [value]="w.completed" />
-          <app-stat-card label="Average turnaround" [value]="w.avgTurnaroundHours" unit="h" hint="Assigned → resolved" />
-          <app-stat-card label="Median turnaround" [value]="w.p50TurnaroundHours" unit="h" />
-          <app-stat-card label="Rework rate" [value]="w.reworkRate" unit="%" hint="Of completed in range" />
+          <app-stat-card label="Completed in range" [value]="w.completed" tone="ok" />
+          <app-stat-card label="Average turnaround" [value]="w.avgTurnaroundHours" unit="h" hint="Assigned → resolved" tone="info" />
+          <app-stat-card label="Median turnaround" [value]="w.p50TurnaroundHours" unit="h" tone="info" />
+          <app-stat-card label="Rework rate" [value]="w.reworkRate" unit="%" hint="Of completed in range" tone="danger" />
         </div>
-        <app-bar-list title="All work orders by current status" [counts]="w.byStatus" />
+        <app-bar-list title="All work orders by current status" [counts]="w.byStatus" [tone]="chartTone" />
       </section>
     }
     @if (s.procurement; as p) {
       <section class="block" data-section="procurement" aria-labelledby="a-proc">
         <h3 id="a-proc">Procurement</h3>
         <div class="tiles">
-          <app-stat-card label="Open handoffs" [value]="p.open" />
-          <app-stat-card label="Overdue" [value]="p.overdue" [alert]="true" hint="Open, past expected response" />
-          <app-stat-card label="Completed in range" [value]="p.completed" />
-          <app-stat-card label="Average time to outcome" [value]="p.avgDaysToOutcome" unit="days" />
+          <app-stat-card label="Open handoffs" [value]="p.open" tone="warn" />
+          <app-stat-card label="Overdue" [value]="p.overdue" [alert]="true" hint="Open, past expected response" tone="danger" />
+          <app-stat-card label="Completed in range" [value]="p.completed" tone="ok" />
+          <app-stat-card label="Average time to outcome" [value]="p.avgDaysToOutcome" unit="days" tone="info" />
         </div>
-        <app-bar-list title="All handoffs by current status" [counts]="p.byStatus" />
+        <app-bar-list title="All handoffs by current status" [counts]="p.byStatus" [tone]="chartTone" />
       </section>
     }
     @if (s.agent; as a) {
@@ -113,7 +117,7 @@
           <app-stat-card label="Latency p50" [value]="a.latencyP50Seconds" unit="s" hint="Report created → screened" />
           <app-stat-card label="Latency p95" [value]="a.latencyP95Seconds" unit="s" />
         </div>
-        <app-bar-list title="Reports in range by screening status" [counts]="a.byStatus" />
+        <app-bar-list title="Reports in range by screening status" [counts]="a.byStatus" [tone]="chartTone" />
       </section>
     }
   }

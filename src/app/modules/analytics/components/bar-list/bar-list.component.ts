@@ -1,6 +1,7 @@
 import { Component, computed, input } from '@angular/core';
 import { HumanizePipe } from '@app/shared/pipes/humanize.pipe';
 import { Counts } from '../../analytics.models';
+import { TONE_COLOR, Tone } from '../../tones';
 
 /**
  * A breakdown (status → count) as horizontal bars, biggest first. The counts are printed as returned; the bar
@@ -16,7 +17,7 @@ import { Counts } from '../../analytics.models';
         @for (r of rows(); track r.key) {
           <li [title]="(r.key | humanize) + ': ' + r.value">
             <span class="name">{{ r.key | humanize }}</span>
-            <span class="track" aria-hidden="true"><span class="bar" [style.width.%]="r.pct"></span></span>
+            <span class="track" aria-hidden="true"><span class="bar" [style.width.%]="r.pct" [style.background]="r.color"></span></span>
             <span class="num">{{ r.value }}</span>
           </li>
         }
@@ -40,9 +41,12 @@ import { Counts } from '../../analytics.models';
 export class BarListComponent {
   readonly title = input.required<string>();
   readonly counts = input<Counts | null | undefined>(null);
+  /** Colour each bar by its key (status charts); null keeps the accent colour. The label always names the status. */
+  readonly tone = input<((key: string) => Tone) | null>(null);
   readonly rows = computed(() => {
     const entries = Object.entries(this.counts() ?? {}).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
     const max = Math.max(1, ...entries.map(([, v]) => v));
-    return entries.map(([key, value]) => ({ key, value, pct: (value / max) * 100 }));
+    const tone = this.tone();
+    return entries.map(([key, value]) => ({ key, value, pct: (value / max) * 100, color: tone ? TONE_COLOR[tone(key)] : null }));
   });
 }

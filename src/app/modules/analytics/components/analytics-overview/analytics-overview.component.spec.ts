@@ -106,6 +106,47 @@ describe('AnalyticsOverviewComponent', () => {
     expect(stat('Reports created')).toBe('1234');
     expect(el.querySelector('.banner.error')?.textContent).toContain('Showing the previous figures');
   });
+
+  it('colours status bars by status (Cancelled red, Resolved green) and leaves category bars plain', async () => {
+    const { respond, el } = setup();
+    await respond({ ...FULL, sections: { ...FULL.sections, reports: { ...FULL.sections.reports!, byStatus: { CANCELLED: 19, RESOLVED: 6, PENDING_REVIEW: 1 } } } });
+    const colours = (section: string, n = 0) =>
+      Object.fromEntries([...[...el.querySelectorAll(`[data-section="${section}"] app-bar-list`)][n].querySelectorAll('li')].map((li) => [
+        li.querySelector('.name')?.textContent,
+        (li.querySelector('.bar') as HTMLElement).style.background,
+      ]));
+    expect(colours('reports')).toEqual({ Cancelled: 'var(--sf-danger)', Resolved: 'var(--sf-ok)', 'Pending review': 'var(--sf-warn)' });
+    expect(Object.values(colours('reports', 1)).every((c) => c === '')).toBe(true); // by category: accent default
+    expect(colours('agent')).toEqual({ Completed: 'var(--sf-ok)', Failed: 'var(--sf-danger)' });
+    expect(colours('workOrders')).toEqual({ Completed: 'var(--sf-ok)', Assigned: 'var(--sf-accent)' });
+  });
+
+  it('colours tile values by urgency only when non-zero (a 0 is never an alarm)', async () => {
+    const { respond, el } = setup();
+    await respond(FULL);
+    const color = (label: string) =>
+      ([...el.querySelectorAll('app-stat-card')].find((c) => c.querySelector('.label')?.textContent?.trim() === label)?.querySelector('.value') as HTMLElement).style.color;
+    expect(color('Under 1 day')).toBe(''); // 0
+    expect(color('1–3 days')).toBe('rgb(180, 83, 9)');
+    expect(color('3–7 days')).toBe('rgb(194, 65, 12)');
+    expect(color('Over 7 days')).toBe('rgb(185, 28, 28)');
+    expect(color('Waiting for review')).toBe('rgb(77, 124, 15)');
+    expect(color('Completed in range')).toBe('var(--sf-ok)');
+    expect(color('Rework rate')).toBe('var(--sf-danger)');
+    expect(color('Average time to outcome')).toBe(''); // no data
+  });
+
+  it('picks From/To with a calendar: read-only fields, values as calendar days', async () => {
+    const { respond, fixture, el } = setup();
+    await respond(FULL);
+    const [from, to] = [...el.querySelectorAll<HTMLInputElement>('mat-date-range-input input')];
+    expect(from.readOnly && to.readOnly).toBe(true);
+    expect(el.querySelector('input[type="date"]')).toBeNull();
+    const cmp = fixture.componentInstance;
+    expect(cmp.iso(cmp.asDate('2026-02-28'))).toBe('2026-02-28');
+    expect(cmp.asDate('bad')).toBeNull();
+    expect(cmp.iso(null)).toBe('');
+  });
 });
 
 describe('rangeError (seefix-api dateRange rules)', () => {

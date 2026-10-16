@@ -20,6 +20,11 @@ const TONE: Record<string, string> = {
   SUPERVISOR_REVIEW_REQUIRED: 'info',
 };
 
+/** The tone a status is shown in (chips; analytics charts reuse it). Unknown values are muted. */
+export function statusTone(value: string | null | undefined): string {
+  return TONE[value ?? ''] ?? 'muted';
+}
+
 @Component({
   selector: 'app-status-chip',
   templateUrl: './status-chip.component.html',
@@ -27,6 +32,6 @@ const TONE: Record<string, string> = {
 })
 export class StatusChipComponent {
   readonly value = input<string | null | undefined>();
-  readonly tone = computed(() => TONE[this.value() ?? ''] ?? 'muted');
+  readonly tone = computed(() => statusTone(this.value()));
   readonly text = computed(() => humanize(this.value()));
 }
