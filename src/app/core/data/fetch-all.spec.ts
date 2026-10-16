@@ -29,6 +29,19 @@ function server(data: () => Row[], opts: { versions?: (page: number) => string |
 const signal = () => new AbortController().signal;
 
 describe('fetchAll', () => {
+  it('legacy API (no paging fields, no version header): one request, every row, no error', async () => {
+    const data = rows(200);
+    const calls: number[] = [];
+    // Production before seefix-api#22 ignores ?page&pageSize and answers { items } only.
+    const fetchPage = async (page: number) => {
+      calls.push(page);
+      return { body: { items: data }, versions: null } as PageResponse<Row>;
+    };
+    const res = await fetchAll(fetchPage, idOf, { signal: signal() });
+    expect(calls).toEqual([1]);
+    expect(res).toEqual({ rows: data, pages: 1, restarted: false, versions: null });
+  });
+
   for (const size of [0, 1, 250, 500, 501, 10_234]) {
     it(`loads every row exactly once in server order (${size} rows)`, async () => {
       const data = rows(size);

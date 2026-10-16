@@ -59,6 +59,19 @@ describe('DatasetStore', () => {
     }
   }
 
+  it('current production API shape: legacy { items } without headers is one complete page', async () => {
+    const set = store.get(REPORTS);
+    const done = set.ensure();
+    http.expectOne((r) => r.url === REPORTS.path).flush({ items: rows(200) }); // no page/pageSize/hasMore, no X-Data-Versions
+    await done;
+    await settle();
+    http.expectNone((r) => r.url === REPORTS.path); // no second page request
+    expect(set.rows().length).toBe(200);
+    expect(set.error()).toBeNull();
+    expect(set.partial()).toBe(false);
+    expect(set.loading()).toBe(false);
+  });
+
   it('fetches every page with ?page&pageSize=500, then serves later views from memory', async () => {
     const set = store.get(REPORTS);
     const done = set.ensure();
