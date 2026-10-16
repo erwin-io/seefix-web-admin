@@ -22,20 +22,20 @@ import { UiService } from '@app/shared/services/ui.service';
 import { entityLink } from '@app/shared/utils/entity-link';
 import { AssistantLauncherComponent } from '../assistant/assistant-launcher.component';
 
-interface NavItem {
+export interface NavItem {
   label: string;
   icon: string;
   link: string;
   roles?: Role[];
 }
 
-const NAV: NavItem[] = [
+export const NAV: NavItem[] = [
   { label: 'Dashboard', icon: 'space_dashboard', link: '/dashboard' },
   { label: 'Action Center', icon: 'bolt', link: '/maintenance/action-center', roles: MAINTENANCE },
   { label: 'Review Queue', icon: 'fact_check', link: '/maintenance/review-queue', roles: MAINTENANCE },
+  { label: 'Campus Map', icon: 'map', link: '/map', roles: WORK_ROLES },
   { label: 'Reports', icon: 'report', link: '/maintenance/reports', roles: MAINTENANCE },
   { label: 'Work Orders', icon: 'construction', link: '/work-orders', roles: WORK_ROLES },
-  { label: 'Campus Map', icon: 'map', link: '/map', roles: WORK_ROLES },
   { label: 'Procurement', icon: 'local_shipping', link: '/procurement/inbox', roles: PROCUREMENT_READERS },
   { label: 'Users', icon: 'group', link: '/admin/users', roles: ['ADMIN'] },
   { label: 'AI Knowledge', icon: 'psychology', link: '/admin/knowledge', roles: ['ADMIN'] },
