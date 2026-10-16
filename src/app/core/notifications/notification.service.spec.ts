@@ -159,6 +159,21 @@ describe('NotificationService', () => {
       list();
     });
 
+    it('data.changed is only a "check now" hint: payload ignored, also fired on (re)connect, never after logout', () => {
+      const hints = vi.fn();
+      inbox.onDataChanged(hints);
+      fake.connected();
+      fake.authorized();
+      list();
+      expect(hints).toHaveBeenCalledTimes(1); // going live may have missed hints
+      fake.emit('ch:data.changed', { versions: { reports: 1e9 }, rows: ['must not be read'] });
+      expect(hints).toHaveBeenCalledTimes(2);
+      expect(hints).toHaveBeenLastCalledWith();
+      TestBed.inject(SessionService).end();
+      fake.emit('ch:data.changed', {});
+      expect(hints).toHaveBeenCalledTimes(2);
+    });
+
     it('stays on polling when channel authorization is rejected', async () => {
       fake.connected();
       fake.rejected(403);

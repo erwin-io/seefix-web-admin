@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, effect, inject, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -38,8 +38,24 @@ export class DashboardPage {
   readonly myWork = signal<WorkOrderItem[]>([]);
   readonly firstName = () => this.session.user()?.fullName.split(/\s+/)[0] ?? '';
 
+  private readonly sets = {
+    actions: this.session.has(...MAINTENANCE) ? this.store.get(ACTION_CENTER) : null,
+    queue: this.session.has(...MAINTENANCE) ? this.store.get(REVIEW_QUEUE) : null,
+    workOrders: this.session.has(...WORK_ROLES) ? this.store.get(WORK_ORDERS) : null,
+    inbox: this.session.has(...PROCUREMENT_READERS) ? this.store.get(PROCUREMENT_INBOX) : null,
+    users: this.session.has('ADMIN') ? this.store.get(USERS) : null,
+  };
+
   constructor() {
-    void this.refresh(false);
+    // Attached like a list page: a version change or own write reloads these now, and the counts follow.
+    const destroyRef = inject(DestroyRef);
+    const used = Object.values(this.sets).filter((x) => x !== null);
+    used.forEach((set) => set.attach(destroyRef));
+    this.store.onActivity();
+    effect(() => {
+      used.forEach((set) => set.loadedAt());
+      untracked(() => void this.refresh(false));
+    });
   }
 
   link(a: ActionItem): string | null {
@@ -51,18 +67,13 @@ export class DashboardPage {
     const s = this.session;
     // A failing or incomplete card shows a dash; the others still load.
     const get = async <T>(set: Dataset<T>) => {
-      await (force ? set.refresh() : set.ensure());
+      await (force ? set.reload() : set.ensure());
       return set.error() ? null : set.rows();
     };
     const count = <T>(list: T[] | null, pred: (x: T) => boolean = () => true) => (list ? list.filter(pred).length : null);
 
-    const [actions, queue, workOrders, inbox, users] = await Promise.all([
-      s.has(...MAINTENANCE) ? get(this.store.get(ACTION_CENTER)) : null,
-      s.has(...MAINTENANCE) ? get(this.store.get(REVIEW_QUEUE)) : null,
-      s.has(...WORK_ROLES) ? get(this.store.get(WORK_ORDERS)) : null,
-      s.has(...PROCUREMENT_READERS) ? get(this.store.get(PROCUREMENT_INBOX)) : null,
-      s.has('ADMIN') ? get(this.store.get(USERS)) : null,
-    ]);
+    const { actions: a, queue: q, workOrders: w, inbox: i, users: u } = this.sets;
+    const [actions, queue, workOrders, inbox, users] = await Promise.all([a && get(a), q && get(q), w && get(w), i && get(i), u && get(u)]);
 
     const m: Metric[] = [];
     if (s.has(...MAINTENANCE)) {

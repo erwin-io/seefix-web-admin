@@ -13,6 +13,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { filter, map } from 'rxjs';
 import { SessionService } from '@app/core/auth/session.service';
+import { CacheSyncService } from '@app/core/data/cache-sync.service';
 import { MAINTENANCE, PROCUREMENT_READERS, ROLE_LABEL, Role, WORK_ROLES } from '@app/core/models/user.model';
 import { Notification } from '@app/core/notifications/notification.model';
 import { NotificationService } from '@app/core/notifications/notification.service';
@@ -51,6 +52,7 @@ export class ShellComponent implements OnInit {
   readonly inbox = inject(NotificationService);
   private readonly router = inject(Router);
   private readonly ui = inject(UiService);
+  private readonly sync = inject(CacheSyncService);
 
   readonly mobile = toSignal(inject(BreakpointObserver).observe('(max-width: 960px)').pipe(map((r) => r.matches)), {
     initialValue: false,
@@ -79,6 +81,7 @@ export class ShellComponent implements OnInit {
 
   ngOnInit(): void {
     void this.inbox.start();
+    this.sync.start();
   }
 
   open(n: Notification): void {

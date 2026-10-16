@@ -30,6 +30,8 @@ export interface FetchAllResult<T> {
   pages: number;
   /** The domain versions moved during the load and it was fetched again. */
   restarted: boolean;
+  /** `X-Data-Versions` of page 1 of the kept pass: the oldest stamp in the result (null when the API sent none). */
+  versions: string | null;
 }
 
 /** Some pages failed after retries: `rows` holds the contiguous pages that did load. */
@@ -56,10 +58,10 @@ export async function fetchAll<T>(
   opts: FetchAllOptions<T>,
 ): Promise<FetchAllResult<T>> {
   const first = await attempt(fetchPage, idOf, opts, true);
-  if (!first.versionsChanged) return { rows: first.rows, pages: first.pages, restarted: false };
+  if (!first.versionsChanged) return { rows: first.rows, pages: first.pages, restarted: false, versions: first.stamp };
   // The retry always runs to the last page, even if versions move again: never a truncated list.
   const second = await attempt(fetchPage, idOf, opts, false);
-  return { rows: second.rows, pages: second.pages, restarted: true };
+  return { rows: second.rows, pages: second.pages, restarted: true, versions: second.stamp };
 }
 
 async function attempt<T>(
@@ -128,7 +130,7 @@ async function attempt<T>(
   if (last > 1) await Promise.all(Array.from({ length: concurrency }, worker));
   if (signal.aborted) throw abortError();
   if (failure && !versionsChanged) throw new PartialLoadError(join(), failure);
-  return { rows: join(), pages: Math.min(last, pages.size), versionsChanged };
+  return { rows: join(), pages: Math.min(last, pages.size), versionsChanged, stamp: stamp as string | null };
 }
 
 async function withRetry<R>(run: () => Promise<R>, retries: number, delayMs: number, signal: AbortSignal): Promise<R> {
