@@ -38,6 +38,11 @@ export const routes: Routes = [
         loadChildren: () => import('./modules/procurement/procurement.routes').then((m) => m.PROCUREMENT_ROUTES),
       },
       {
+        path: 'map',
+        data: { roles: WORK_ROLES, crumb: 'Campus Map' },
+        loadChildren: () => import('./modules/campus/campus.routes').then((m) => m.MAP_ROUTES),
+      },
+      {
         path: 'admin',
         data: { roles: ['ADMIN'], crumb: 'Admin' },
         loadChildren: () => import('./modules/admin/admin.routes').then((m) => m.ADMIN_ROUTES),

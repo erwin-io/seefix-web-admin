@@ -1,0 +1,225 @@
+<div class="page-head">
+  <div>
+    <h1>{{ creating() ? 'Add building' : (base()?.name ?? 'Building') }}</h1>
+    <p>
+      @if (base(); as b) {
+        Code {{ b.code }} · geometry revision {{ b.geometryRevision }}
+        @if (b.geometryUpdatedAt) {
+          · location last changed {{ b.geometryUpdatedAt | date: 'MMM d, y, h:mm a' }}
+        }
+      } @else {
+        Name, default pin, perimeter and tolerance used to place reports on the campus map.
+      }
+    </p>
+  </div>
+  <div class="actions">
+    <a mat-stroked-button routerLink="/admin/buildings"><mat-icon>arrow_back</mat-icon>All buildings</a>
+  </div>
+</div>
+
+@if (!creating() && !base()) {
+  <app-page-state
+    [loading]="list.loading()"
+    [error]="list.error() ?? (missing() ? 'This building was not found.' : null)"
+    (retry)="list.reload()"
+    icon="apartment"
+  />
+} @else {
+  @if (conflict(); as c) {
+    <div class="banner error" role="alert" data-banner="conflict">
+      <mat-icon>sync_problem</mat-icon>
+      <div class="grow">
+        <strong>Someone else changed this building's location. Nothing was saved.</strong>
+        @if (c.latest; as latest) {
+          <p>
+            The saved geometry is now revision {{ latest.geometryRevision }} (you started from revision {{ base()?.geometryRevision }}).
+            Load it and redo your location edits, or keep your edits and save over it.
+          </p>
+          <div class="row">
+            <button mat-stroked-button (click)="useLatest()">Load latest location</button>
+            <button mat-button (click)="keepMine()">Keep my edits</button>
+          </div>
+        } @else {
+          <p>Loading the latest version…</p>
+        }
+      </div>
+    </div>
+  }
+  @if (saveError()) {
+    <div class="banner error" role="alert"><mat-icon>error_outline</mat-icon><span>{{ saveError() }}</span></div>
+  }
+
+  <form class="layout" (submit)="$event.preventDefault(); save()" novalidate>
+    <section class="card details">
+      <h2>Details</h2>
+      <mat-form-field>
+        <mat-label>Code</mat-label>
+        <input matInput name="code" [ngModel]="form().code" (ngModelChange)="patch({ code: $event })" [readonly]="!creating()" maxlength="60" />
+        @if (!creating()) {
+          <mat-hint>The code can't be changed after creation.</mat-hint>
+        }
+      </mat-form-field>
+      @if (errors().code) {
+        <p class="field-error" role="alert">{{ errors().code }}</p>
+      }
+      <mat-form-field>
+        <mat-label>Name</mat-label>
+        <input matInput name="name" required [ngModel]="form().name" (ngModelChange)="patch({ name: $event })" maxlength="200" />
+        @if (!creating()) {
+          <mat-hint>Renaming doesn't change existing reports' building text or GPS.</mat-hint>
+        }
+      </mat-form-field>
+      @if (errors().name) {
+        <p class="field-error" role="alert">{{ errors().name }}</p>
+      }
+      <mat-form-field>
+        <mat-label>Description</mat-label>
+        <textarea matInput name="description" rows="2" [ngModel]="form().description" (ngModelChange)="patch({ description: $event })"></textarea>
+      </mat-form-field>
+      <div class="pair">
+        <mat-form-field>
+          <mat-label>Sort order</mat-label>
+          <input matInput type="number" step="1" name="sortOrder" [ngModel]="form().sortOrder" (ngModelChange)="patch({ sortOrder: $event })" />
+        </mat-form-field>
+        <mat-checkbox name="isActive" [ngModel]="form().isActive" (ngModelChange)="patch({ isActive: $event })">Active (shown on the map)</mat-checkbox>
+      </div>
+      @if (errors().sortOrder) {
+        <p class="field-error" role="alert">{{ errors().sortOrder }}</p>
+      }
+
+      <h2>Location</h2>
+      <p class="muted">
+        Report GPS inside the perimeter, or within the tolerance of it, is shown as submitted. GPS outside it, or missing, is shown at the
+        default pin. Raw GPS is never changed.
+      </p>
+      <div class="pair">
+        <mat-form-field>
+          <mat-label>Default pin latitude</mat-label>
+          <input matInput type="number" step="any" name="defaultLat" [ngModel]="form().defaultLat" (ngModelChange)="patch({ defaultLat: $event })" />
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Default pin longitude</mat-label>
+          <input matInput type="number" step="any" name="defaultLng" [ngModel]="form().defaultLng" (ngModelChange)="patch({ defaultLng: $event })" />
+        </mat-form-field>
+        @if (form().defaultLat !== null || form().defaultLng !== null) {
+          <button mat-button type="button" (click)="clearPin()">Remove pin</button>
+        }
+      </div>
+      @if (errors().defaultLat) {
+        <p class="field-error" role="alert">{{ errors().defaultLat }}</p>
+      }
+      <mat-form-field>
+        <mat-label>Tolerance (metres)</mat-label>
+        <input matInput type="number" step="1" min="0" [max]="maxTolerance" name="tolerance" [ngModel]="form().toleranceMeters" (ngModelChange)="patch({ toleranceMeters: $event })" />
+        <mat-hint>GPS this close outside the perimeter still counts as inside (0–{{ maxTolerance }}).</mat-hint>
+      </mat-form-field>
+      @if (errors().toleranceMeters) {
+        <p class="field-error" role="alert">{{ errors().toleranceMeters }}</p>
+      }
+
+      <h3>Perimeter ({{ form().perimeter.length }} of up to {{ maxVertices }} points)</h3>
+      @if (errors().perimeter) {
+        <p class="field-error" role="alert" data-error="perimeter">{{ errors().perimeter }}</p>
+      }
+      @if (form().perimeter.length) {
+        <table class="vertices">
+          <thead><tr><th scope="col">#</th><th scope="col">Latitude</th><th scope="col">Longitude</th><th><span class="sr-only">Remove</span></th></tr></thead>
+          <tbody>
+            @for (p of form().perimeter; track $index; let i = $index) {
+              <tr>
+                <td>{{ i + 1 }}</td>
+                <td><input type="number" step="any" [attr.aria-label]="'Point ' + (i + 1) + ' latitude'" [value]="p[0]" (change)="setVertex(i, 0, $any($event.target).valueAsNumber)" /></td>
+                <td><input type="number" step="any" [attr.aria-label]="'Point ' + (i + 1) + ' longitude'" [value]="p[1]" (change)="setVertex(i, 1, $any($event.target).valueAsNumber)" /></td>
+                <td><button mat-icon-button type="button" [attr.aria-label]="'Remove point ' + (i + 1)" (click)="removeVertex(i)"><mat-icon>close</mat-icon></button></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        <button mat-button type="button" (click)="clearPerimeter()"><mat-icon>delete_sweep</mat-icon>Clear perimeter</button>
+      } @else {
+        <p class="muted">No perimeter: report GPS is always shown as submitted.</p>
+      }
+      <details>
+        <summary>Paste coordinates</summary>
+        <mat-form-field class="paste">
+          <mat-label>[[lat, lng], …] or one "lat, lng" per line</mat-label>
+          <textarea matInput name="paste" rows="4" [ngModel]="pasteText()" (ngModelChange)="pasteText.set($event)"></textarea>
+        </mat-form-field>
+        @if (pasteError()) {
+          <p class="field-error" role="alert">{{ pasteError() }}</p>
+        }
+        <button mat-stroked-button type="button" (click)="applyPaste()">Replace perimeter</button>
+      </details>
+
+      @if (geometryChanged() || creating()) {
+        <mat-form-field>
+          <mat-label>Reason for the location change (optional)</mat-label>
+          <input matInput name="reason" maxlength="500" [ngModel]="form().reason" (ngModelChange)="patch({ reason: $event })" />
+          <mat-hint>Saved in the geometry history.</mat-hint>
+        </mat-form-field>
+      }
+
+      <div class="save">
+        <button mat-flat-button type="submit" [disabled]="!valid() || !dirty() || saving() || !!conflict()">
+          {{ saving() ? 'Saving…' : creating() ? 'Create building' : 'Save changes' }}
+        </button>
+        @if (!valid()) {
+          <span class="field-error">Fix the highlighted fields to save.</span>
+        }
+      </div>
+    </section>
+
+    <section class="card map">
+      <header>
+        <h2>Draw on the map</h2>
+        <mat-button-toggle-group [value]="clickMode()" (change)="clickMode.set($event.value)" aria-label="Map click adds" hideSingleSelectionIndicator>
+          <mat-button-toggle value="vertex">Add perimeter point</mat-button-toggle>
+          <mat-button-toggle value="pin">Set default pin</mat-button-toggle>
+        </mat-button-toggle-group>
+      </header>
+      <app-campus-map-view
+        #mapView
+        [buildings]="others()"
+        [draft]="draft()"
+        (mapClick)="mapClick($event)"
+        label="Building location editor. Click to add perimeter points or set the default pin; the fields on the left are the keyboard alternative."
+      />
+      @if (mapView.failed()) {
+        <p class="muted" role="status">The map couldn't load. Enter the coordinates in the fields instead.</p>
+      } @else if (mapView.tilesFailed()) {
+        <p class="muted" role="status">Map tiles aren't loading; outlines and points still show.</p>
+      }
+      <p class="muted">Other buildings are outlined in grey; this building's draft is purple.</p>
+    </section>
+  </form>
+
+  @if (!creating()) {
+    <section class="card history" aria-labelledby="history-title">
+      <h2 id="history-title">Geometry history</h2>
+      <app-page-state [loading]="history.loading() && !history.value()" [error]="history.error()" (retry)="history.reload()" icon="history" />
+      @if (history.value(); as h) {
+        <table class="plain">
+          <thead>
+            <tr><th scope="col">Revision</th><th scope="col">Changed</th><th scope="col">By</th><th scope="col">Location</th><th scope="col">Reason</th></tr>
+          </thead>
+          <tbody>
+            @for (r of h.items; track r.revision) {
+              <tr>
+                <td>{{ r.revision }}</td>
+                <td>{{ r.changedAt | date: 'MMM d, y, h:mm a' }}</td>
+                <td>{{ r.changedBy ?? '—' }}</td>
+                <td>
+                  {{ r.perimeter ? r.perimeter.length + '-point perimeter' : 'No perimeter' }} · {{ r.toleranceMeters ?? '—' }} m ·
+                  {{ r.defaultLat !== null ? 'pin ' + r.defaultLat + ', ' + r.defaultLng : 'no pin' }}
+                </td>
+                <td>{{ r.reason ?? '—' }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="5">No geometry changes recorded.</td></tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
+  }
+}
