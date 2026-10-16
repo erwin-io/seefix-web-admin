@@ -11,7 +11,7 @@ import { SessionService } from '@app/core/auth/session.service';
 import { UiService } from '@app/shared/services/ui.service';
 import { AssistantLauncherComponent } from './assistant-launcher.component';
 import { AssistantRecordComponent } from './assistant-record.component';
-import { AssistantRemindersComponent } from './assistant-reminders.component';
+import { AssistantRemindersComponent, TIME_OPTIONS, localDueAt } from './assistant-reminders.component';
 import { ReassessmentHistory, RecordFact, ToolCatalog } from './assistant.model';
 import { AssistantStore } from './assistant.store';
 
@@ -331,7 +331,8 @@ describe('Assistant UI', () => {
       comp.form.setValue({
         title: 'Follow up',
         message: '',
-        dueAt: '2099-01-02T09:30',
+        dueDate: new Date(2099, 0, 2),
+        dueTime: '09:30',
         attach: true,
       });
 
@@ -366,13 +367,27 @@ describe('Assistant UI', () => {
       reload.flush({ items: [] });
     });
 
+    it('"When" is a calendar plus a time menu: the date field cannot be typed into', async () => {
+      const fixture = await open();
+      const el = fixture.nativeElement as HTMLElement;
+      const date = el.querySelector<HTMLInputElement>('input[formcontrolname="dueDate"]')!;
+      expect(date.readOnly).toBe(true);
+      expect(el.querySelector('mat-datepicker-toggle')).not.toBeNull();
+      expect(el.querySelector('mat-select[formcontrolname="dueTime"]')).not.toBeNull();
+      expect(el.querySelector('input[type="datetime-local"]')).toBeNull();
+      expect(TIME_OPTIONS).toHaveLength(96);
+      expect(TIME_OPTIONS[38].value).toBe('09:30');
+      expect(localDueAt(new Date(2099, 0, 2), '09:30')).toBe('2099-01-02T09:30');
+    });
+
     it('rejects a past time without calling the API, and explains a 409 on cancel', async () => {
       const fixture = await open();
       const comp = fixture.componentInstance;
       comp.form.setValue({
         title: 'Too late',
         message: '',
-        dueAt: '2001-01-01T09:00',
+        dueDate: new Date(new Date().setHours(0, 0, 0, 0)), // today: a past date can't even be picked
+        dueTime: '00:00',
         attach: true,
       });
       await comp.create();

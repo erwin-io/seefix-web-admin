@@ -12,14 +12,31 @@
       <mat-label>Note (optional)</mat-label>
       <textarea matInput formControlName="message" rows="2" maxlength="2000"></textarea>
     </mat-form-field>
-    <mat-form-field subscriptSizing="dynamic">
-      <mat-label>When</mat-label>
-      <input matInput type="datetime-local" formControlName="dueAt" required />
-      <mat-hint>Your time zone: {{ timeZone }}</mat-hint>
-      @if (form.controls.dueAt.invalid && form.controls.dueAt.touched) {
-        <mat-error>Pick a date and time.</mat-error>
-      }
-    </mat-form-field>
+    <div class="when" role="group" aria-labelledby="sf-rem-when">
+      <span class="sr" id="sf-rem-when">When</span>
+      <mat-form-field subscriptSizing="dynamic" class="date">
+        <mat-label>Date</mat-label>
+        <!-- Picker only: the field opens the calendar and can't be typed into. -->
+        <input matInput readonly [matDatepicker]="duePicker" [min]="today" formControlName="dueDate" required (click)="duePicker.open()" (keydown.enter)="duePicker.open()" />
+        <mat-datepicker-toggle matIconSuffix [for]="duePicker" aria-label="Open calendar" />
+        <mat-datepicker #duePicker />
+        @if (form.controls.dueDate.invalid && form.controls.dueDate.touched) {
+          <mat-error>Pick a date.</mat-error>
+        }
+      </mat-form-field>
+      <mat-form-field subscriptSizing="dynamic" class="time">
+        <mat-label>Time</mat-label>
+        <mat-select formControlName="dueTime" required>
+          @for (t of times; track t.value) {
+            <mat-option [value]="t.value">{{ t.label }}</mat-option>
+          }
+        </mat-select>
+        @if (form.controls.dueTime.invalid && form.controls.dueTime.touched) {
+          <mat-error>Pick a time.</mat-error>
+        }
+      </mat-form-field>
+    </div>
+    <p class="zone">Your time zone: {{ timeZone }}</p>
     @if (store.context()) {
       <mat-checkbox formControlName="attach">Link the record on screen</mat-checkbox>
     }

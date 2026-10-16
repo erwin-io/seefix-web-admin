@@ -1,5 +1,8 @@
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { provideNativeDateAdapter } from '@angular/material/core';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -14,6 +17,25 @@ import { Reminder, ReminderStatus } from './assistant.model';
 import { AssistantStore } from './assistant.store';
 
 const CANCELLABLE: ReminderStatus[] = ['SCHEDULED', 'PROCESSING', 'FAILED'];
+
+const pad = (n: number) => String(n).padStart(2, '0');
+
+/** Every 15 minutes, labelled in the viewer's locale ("9:30 AM"). */
+export const TIME_OPTIONS = Array.from({ length: 96 }, (_, i) => {
+  const value = `${pad(Math.floor(i / 4))}:${pad((i % 4) * 15)}`;
+  const label = new Date(2000, 0, 1, Math.floor(i / 4), (i % 4) * 15).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return { value, label };
+});
+
+/** The picked local date + "HH:mm" as the API's local `YYYY-MM-DDTHH:mm` (no time zone conversion here). */
+export function localDueAt(date: Date, time: string): string {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${time}`;
+}
+
+function startOfToday(): Date {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
 
 /** The browser's IANA zone; the API reads the local `dueAt` in it and stores UTC. */
 export function localTimeZone(): string {
@@ -48,7 +70,10 @@ export function formatDue(r: Pick<Reminder, 'dueAt' | 'timeZone'>): string {
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
+    MatDatepickerModule,
+    MatSelectModule,
   ],
+  providers: [provideNativeDateAdapter()],
   templateUrl: './assistant-reminders.component.html',
   styleUrl: './assistant-reminders.component.scss',
 })
@@ -60,6 +85,9 @@ export class AssistantRemindersComponent {
   readonly statusLabel = REMINDER_STATUS;
   readonly formatDue = formatDue;
   readonly timeZone = localTimeZone();
+  readonly times = TIME_OPTIONS;
+  /** The calendar starts at today (a past time is refused anyway). */
+  readonly today = startOfToday();
   readonly scope = signal<'received' | 'created'>('received');
   readonly items = signal<Reminder[] | null>(null);
   readonly error = signal<string | null>(null);
@@ -73,7 +101,8 @@ export class AssistantRemindersComponent {
       validators: [Validators.required, Validators.maxLength(250)],
     }),
     message: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(2000)] }),
-    dueAt: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    dueDate: new FormControl<Date | null>(null, { validators: [Validators.required] }),
+    dueTime: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     attach: new FormControl(true, { nonNullable: true }),
   });
 
@@ -110,7 +139,8 @@ export class AssistantRemindersComponent {
     this.form.markAllAsTouched();
     const v = this.form.getRawValue();
     if (this.form.invalid || this.busy()) return;
-    if (!(new Date(v.dueAt).getTime() > Date.now())) {
+    const dueAt = localDueAt(v.dueDate!, v.dueTime);
+    if (!(new Date(dueAt).getTime() > Date.now())) {
       this.problem.set('Pick a time in the future.');
       return;
     }
@@ -118,7 +148,7 @@ export class AssistantRemindersComponent {
     const params = {
       title: v.title.trim(),
       ...(v.message.trim() ? { message: v.message.trim() } : {}),
-      dueAt: v.dueAt, // local YYYY-MM-DDTHH:mm, read by the API in timeZone (DST handled server-side)
+      dueAt, // local YYYY-MM-DDTHH:mm, read by the API in timeZone (DST handled server-side)
       timeZone: this.timeZone,
       ...(ctx && v.attach ? { entity: { type: ctx.type, id: ctx.id } } : {}),
     };
@@ -130,7 +160,7 @@ export class AssistantRemindersComponent {
       if (!ok) return null;
       this.key ??= newKey();
       await this.api.createReminder(params, { key: this.key });
-      this.form.reset({ title: '', message: '', dueAt: '', attach: true });
+      this.form.reset({ title: '', message: '', dueDate: null, dueTime: '', attach: true });
       this.key = null;
       this.scope.set('created');
       return 'Reminder created. You will get an in-app notification when it is due.';

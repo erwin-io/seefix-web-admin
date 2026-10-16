@@ -58,7 +58,7 @@
               <ul>
                 @for (h of store.hints(); track h.entityType + h.entityId + h.action) {
                   <li>
-                    <button mat-button type="button" class="hint" (click)="store.go(h.route)">
+                    <button type="button" class="hint" (click)="store.go(h.route)">
                       <strong>{{ h.reference ?? (h.entityType | humanize) }}</strong>
                       <span>{{ h.action | humanize }}{{ h.summary ? ' · ' + h.summary : '' }}</span>
                       @if (h.dueAt) {
@@ -112,7 +112,7 @@
                     @if (m.response?.navigation?.length) {
                       <div class="links" role="group" aria-label="Open a related page">
                         @for (n of m.response!.navigation; track n.factId) {
-                          <button mat-stroked-button type="button" (click)="store.go(n.path)">
+                          <button mat-stroked-button type="button" class="nav" (click)="store.go(n.path)">
                             <mat-icon>open_in_new</mat-icon>{{ n.label }}
                           </button>
                         }
@@ -198,7 +198,12 @@
 
     <mat-tab label="Reminders">
       <ng-template matTabContent>
-        <app-assistant-reminders />
+        <!-- Own chunk (date picker + time menu): loaded when the tab is first opened, not with every page. -->
+        @defer (on immediate) {
+          <app-assistant-reminders />
+        } @loading (minimum 200ms) {
+          <p class="muted" role="status">Loading reminders…</p>
+        }
       </ng-template>
     </mat-tab>
   </mat-tab-group>
