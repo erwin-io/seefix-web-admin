@@ -1,11 +1,14 @@
 import { AppError, toAppError } from '../http/app-error';
 
-/** One page of a paged seefix-api list (`?page&pageSize`). */
+/**
+ * One page of a paged seefix-api list (`?page&pageSize`). An API without paging (production before seefix-api#22)
+ * ignores the params and answers its legacy `{ items }`: no `hasMore`, so it is one complete page.
+ */
 export interface Page<T> {
   items: T[];
-  page: number;
-  pageSize: number;
-  hasMore: boolean;
+  page?: number;
+  pageSize?: number;
+  hasMore?: boolean;
 }
 
 /** A page plus its `X-Data-Versions` stamp (null when the API sent none, e.g. before the cache migration). */
@@ -101,7 +104,7 @@ async function attempt<T>(
       else if (stamp !== res.versions) versionsChanged = stopOnChange;
     }
     pages.set(page, res.body.items);
-    if (!res.body.hasMore) last = Math.min(last, page);
+    if (res.body.hasMore !== true) last = Math.min(last, page);
     if (onProgress) {
       let contiguous = 0;
       while (pages.has(contiguous + 1) && contiguous < last) contiguous++;
