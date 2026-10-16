@@ -5,3 +5,22 @@
 @use 'styles/ticket';
 @use 'styles/utilities';
 @use 'styles/overlays';
+
+/*
+ * Field hints and errors (owner hotfix 2). Material reserves exactly one line under a fixed-size field and positions
+ * the hint absolutely, so a hint that wraps spilled over the next field. Fixed-size fields keep one reserved line (no
+ * jump when an error appears) but grow for longer text; every field leaves a little space before the next one.
+ */
+.mat-mdc-form-field-subscript-wrapper:not(.mat-mdc-form-field-subscript-dynamic-size) {
+  min-height: 20px;
+  &::before {
+    display: none;
+  }
+  .mat-mdc-form-field-hint-wrapper,
+  .mat-mdc-form-field-error-wrapper {
+    position: static;
+  }
+}
+.mat-mdc-form-field-subscript-wrapper {
+  margin-bottom: 6px;
+}

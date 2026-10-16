@@ -124,7 +124,7 @@ export function reportMarker(r: ReportLocation): MapMarker {
     </section>
   `,
   styles: `
-    .loc { --map-height: 260px; }
+    .loc { --map-height: 400px; } /* owner hotfix 1: at least 400 px tall */
     .loc header { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
     .loc h2 { margin: 0; }
     .source { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--sf-surface-2, #eef1f5); }
