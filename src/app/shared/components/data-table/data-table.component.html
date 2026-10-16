@@ -1,0 +1,50 @@
+<div class="table-toolbar">
+  <mat-form-field subscriptSizing="dynamic">
+    <mat-label>Search</mat-label>
+    <input matInput [value]="query()" (input)="query.set($any($event.target).value)" [placeholder]="searchPlaceholder()" />
+    <mat-icon matSuffix>search</mat-icon>
+  </mat-form-field>
+  <ng-content select="[tableFilters]" />
+  <span class="spacer"></span>
+  @if (sorted()) {
+    <button mat-button (click)="restoreDefault()"><mat-icon>restart_alt</mat-icon>Default order</button>
+  }
+  <span class="count" aria-live="polite">
+    @if (dataset().loading() && dataset().rows().length) {
+      Loading… {{ dataset().rows().length }} rows so far
+    } @else {
+      {{ filtered().length }} of {{ all().length }}
+    }
+  </span>
+</div>
+
+@if (dataset().partial()) {
+  <div class="banner error" role="alert">
+    <mat-icon>error_outline</mat-icon><span>{{ dataset().error() }}</span>
+    <button mat-stroked-button (click)="dataset().refresh()">Retry</button>
+  </div>
+}
+@if (dataset().rows().length > memoryWarningRows) {
+  <div class="banner warn" role="status">
+    <mat-icon>memory</mat-icon>
+    <span>{{ dataset().rows().length }} rows are loaded in this browser tab. Narrow the list with filters if the page gets slow.</span>
+  </div>
+}
+
+<div class="table-wrap">
+  @if (dataset().loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+  <app-page-state
+    [loading]="dataset().loading() && !all().length"
+    [error]="dataset().partial() || all().length ? null : dataset().error()"
+    [empty]="dataset().loading() || filtered().length ? null : all().length ? 'No rows match' : emptyText()"
+    (retry)="dataset().refresh()"
+    [icon]="icon()"
+  />
+  <table mat-table [dataSource]="source" [class.hidden]="!filtered().length">
+    <tr mat-header-row *matHeaderRowDef="columns()"></tr>
+    <tr mat-row *matRowDef="let row; columns: columns()" [class.static]="!clickable()" (click)="clickable() && rowClick.emit(row)"></tr>
+  </table>
+  <mat-paginator [class.hidden]="!filtered().length" [pageSizeOptions]="[25, 50, 100]" showFirstLastButtons aria-label="Pages" />
+</div>

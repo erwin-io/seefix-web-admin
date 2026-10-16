@@ -4,17 +4,16 @@ import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { SessionService } from '@app/core/auth/session.service';
-import { Items } from '@app/core/models/api.model';
+import { Dataset, DatasetStore } from '@app/core/data/dataset.store';
 import { MAINTENANCE, PROCUREMENT_READERS, WORK_ROLES } from '@app/core/models/user.model';
-import { AdminService } from '@app/modules/admin/admin.service';
+import { USERS } from '@app/modules/admin/admin.service';
 import { ActionItem } from '@app/modules/maintenance/maintenance.models';
-import { MaintenanceService } from '@app/modules/maintenance/maintenance.service';
-import { ProcurementService } from '@app/modules/procurement/procurement.service';
+import { ACTION_CENTER, REVIEW_QUEUE } from '@app/modules/maintenance/maintenance.service';
+import { PROCUREMENT_INBOX } from '@app/modules/procurement/procurement.service';
 import { WorkOrderItem } from '@app/modules/work-orders/work-orders.models';
-import { WorkOrdersService } from '@app/modules/work-orders/work-orders.service';
+import { WORK_ORDERS } from '@app/modules/work-orders/work-orders.service';
 import { SHARED_IMPORTS } from '@app/shared/shared.imports';
 import { entityLink } from '@app/shared/utils/entity-link';
-import { Observable, firstValueFrom } from 'rxjs';
 
 interface Metric {
   label: string;
@@ -33,35 +32,36 @@ interface Metric {
 })
 export class DashboardPage {
   private readonly session = inject(SessionService);
-  private readonly maintenance = inject(MaintenanceService);
-  private readonly workOrders = inject(WorkOrdersService);
-  private readonly procurement = inject(ProcurementService);
-  private readonly admin = inject(AdminService);
+  private readonly store = inject(DatasetStore);
   readonly metrics = signal<Metric[]>([]);
   readonly actions = signal<ActionItem[]>([]);
   readonly myWork = signal<WorkOrderItem[]>([]);
   readonly firstName = () => this.session.user()?.fullName.split(/\s+/)[0] ?? '';
 
   constructor() {
-    void this.refresh();
+    void this.refresh(false);
   }
 
   link(a: ActionItem): string | null {
     return entityLink(a.EntityType, a.EntityId);
   }
 
-  async refresh(): Promise<void> {
+  /** Counts come from the same full in-memory datasets the list pages use (no 200-row cap, no second fetch). */
+  async refresh(force = true): Promise<void> {
     const s = this.session;
-    // A failing card shows a dash; the others still load.
-    const get = <T>(req: Observable<Items<T>>) => firstValueFrom(req).then((r) => r.items, () => null);
+    // A failing or incomplete card shows a dash; the others still load.
+    const get = async <T>(set: Dataset<T>) => {
+      await (force ? set.refresh() : set.ensure());
+      return set.error() ? null : set.rows();
+    };
     const count = <T>(list: T[] | null, pred: (x: T) => boolean = () => true) => (list ? list.filter(pred).length : null);
 
     const [actions, queue, workOrders, inbox, users] = await Promise.all([
-      s.has(...MAINTENANCE) ? get(this.maintenance.actionCenter()) : null,
-      s.has(...MAINTENANCE) ? get(this.maintenance.reviewQueue('all')) : null,
-      s.has(...WORK_ROLES) ? get(this.workOrders.list(null)) : null,
-      s.has(...PROCUREMENT_READERS) ? get(this.procurement.inbox()) : null,
-      s.has('ADMIN') ? get(this.admin.users()) : null,
+      s.has(...MAINTENANCE) ? get(this.store.get(ACTION_CENTER)) : null,
+      s.has(...MAINTENANCE) ? get(this.store.get(REVIEW_QUEUE)) : null,
+      s.has(...WORK_ROLES) ? get(this.store.get(WORK_ORDERS)) : null,
+      s.has(...PROCUREMENT_READERS) ? get(this.store.get(PROCUREMENT_INBOX)) : null,
+      s.has('ADMIN') ? get(this.store.get(USERS)) : null,
     ]);
 
     const m: Metric[] = [];

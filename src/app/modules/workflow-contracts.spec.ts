@@ -45,16 +45,12 @@ describe('workflow API contracts', () => {
     return t.request;
   }
 
-  it('maintenance: review decision, draft regenerate, queue triage', async () => {
+  it('maintenance: review decision, draft regenerate', async () => {
     const m = TestBed.inject(MaintenanceService);
     const body = { decision: 'NO_ACTION', decisionReason: 'Not a defect' };
     const r = await call(firstValueFrom(m.submitReview('r1', body)), 'POST', '/api/maintenance/reports/r1/review');
     expect(r.body).toEqual(body);
     await call(firstValueFrom(m.regenerateDraft('r1')), 'POST', '/api/maintenance/reports/r1/maintenance-request/regenerate');
-    const q = await call(firstValueFrom(m.reviewQueue('screening')), 'GET', '/api/maintenance/review-queue', { items: [] });
-    expect(q.params.get('triage')).toBe('screening');
-    const list = await call(firstValueFrom(m.reports('all', null)), 'GET', '/api/maintenance/reports', { items: [] });
-    expect(list.params.has('status')).toBe(false);
   });
 
   it('work orders: assign, status, completion via direct upload, supervisor accept/rework', async () => {

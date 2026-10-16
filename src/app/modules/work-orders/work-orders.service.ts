@@ -1,19 +1,24 @@
 import { Injectable, inject } from '@angular/core';
 import { switchMap } from 'rxjs';
+import { DatasetDef } from '@app/core/data/dataset.store';
 import { ApiService } from '@app/core/http/api.service';
 import { DirectUploadService } from '@app/core/http/direct-upload.service';
 import { Items, Row } from '@app/core/models/api.model';
 import { AssignRequest, AssignableUser, WorkOrderDetail, WorkOrderItem } from './work-orders.models';
+
+/** Full list (every page). The API scopes WORKER to the work orders they lead; server order is CreatedAt DESC, Id DESC. */
+export const WORK_ORDERS: DatasetDef<WorkOrderItem> = {
+  key: 'work-orders',
+  path: '/api/work-orders',
+  idOf: (w) => w.id,
+  domains: ['work_orders', 'reports'],
+};
 
 /** seefix-api /api/work-orders/* plus Supervisor closeout under /api/maintenance/work-orders. */
 @Injectable({ providedIn: 'root' })
 export class WorkOrdersService {
   private readonly api = inject(ApiService);
   private readonly uploads = inject(DirectUploadService);
-
-  list(status: string | null) {
-    return this.api.get<Items<WorkOrderItem>>('/api/work-orders', { status });
-  }
 
   get(id: string) {
     return this.api.get<WorkOrderDetail>(`/api/work-orders/${id}`);

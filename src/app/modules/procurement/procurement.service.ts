@@ -1,19 +1,22 @@
 import { Injectable, inject } from '@angular/core';
 import { switchMap } from 'rxjs';
+import { DatasetDef } from '@app/core/data/dataset.store';
 import { ApiService } from '@app/core/http/api.service';
 import { DirectUploadService } from '@app/core/http/direct-upload.service';
-import { Items } from '@app/core/models/api.model';
 import { HandoffDetail, ProcurementInboxItem } from './procurement.models';
+
+export const PROCUREMENT_INBOX: DatasetDef<ProcurementInboxItem> = {
+  key: 'procurement-inbox',
+  path: '/api/procurement/inbox',
+  idOf: (h) => h.HandoffId,
+  domains: ['procurement', 'reports', 'reference'],
+};
 
 /** seefix-api /api/procurement/* plus the Supervisor clarification answer. */
 @Injectable({ providedIn: 'root' })
 export class ProcurementService {
   private readonly api = inject(ApiService);
   private readonly uploads = inject(DirectUploadService);
-
-  inbox() {
-    return this.api.get<Items<ProcurementInboxItem>>('/api/procurement/inbox');
-  }
 
   handoff(id: string) {
     return this.api.get<HandoffDetail>(`/api/procurement/handoffs/${id}`);

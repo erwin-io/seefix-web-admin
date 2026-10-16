@@ -67,9 +67,10 @@ src/
       auth/              session.service.ts · auth.guards.ts
       notifications/     notification.service.ts (inbox + Pusher) · notification.model.ts
       models/            user.model.ts (roles) · api.model.ts
+      data/              fetch-all.ts (every page of a list) · dataset.store.ts (per-user list memory)
       utils/             load.ts (loading/error/value page helper)
     shared/              reusable UI with no business logic
-      components/        status-chip · priority-badge · page-state · evidence-gallery · confirm-dialog
+      components/        data-table · status-chip · priority-badge · page-state · evidence-gallery · confirm-dialog
       pipes/ services/ utils/   humanize · ui.service (confirm/toast) · entity-link
       shared.imports.ts  SHARED_IMPORTS for pages
     layout/shell/        sidebar, top bar, breadcrumbs, notification bell
@@ -139,8 +140,11 @@ the record afterwards, so a 409 shows the server's current state.
 ## Known gaps
 
 1. No user edit / deactivate / admin password reset endpoints: the Users page is list + create only.
-2. No server pagination or search on staff lists (API caps at 200 rows); search is client-side.
-3. Realtime only signals notifications; list/detail pages refresh on demand.
+2. Staff lists load **every page** (`?page&pageSize=500`, seefix-api#22) into memory for the signed-in user, then
+   sort/filter/page locally (`app-data-table`, zero list calls). They reload on Refresh, after the user's own writes
+   and on logout/account switch. Needs an API with list paging; without it page 1 is the legacy capped list.
+3. Realtime only signals notifications; lists don't yet react to other users' changes (`DatasetStore.invalidate()`
+   is the hook for #18).
 4. No Buildings/Locations admin endpoints.
 
 Unit tests use HTTP mocks; they don't call a live API.

@@ -1,7 +1,8 @@
-import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
+import { HttpErrorResponse, HttpEventType, HttpInterceptorFn } from '@angular/common/http';
 import { Injector, inject } from '@angular/core';
 import { tap } from 'rxjs';
 import { SessionService } from '../auth/session.service';
+import { DatasetStore } from '../data/dataset.store';
 import { SKIP_AUTH, isOwnApi } from './api.service';
 import { SESSION_ENDING } from './app-error';
 
@@ -10,6 +11,20 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const token = inject(SessionService).token();
   if (!token || req.context.get(SKIP_AUTH) || !isOwnApi(req.url)) return next(req);
   return next(req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }));
+};
+
+/** Own writes that cannot change a cached list. */
+const NO_LIST_EFFECT = /\/api\/(auth|notifications|uploads)\//;
+
+/** After the user's own successful write, cached lists are revalidated (reloaded now if on screen, else on next view). */
+export const revalidateInterceptor: HttpInterceptorFn = (req, next) => {
+  if (req.method === 'GET' || !isOwnApi(req.url) || NO_LIST_EFFECT.test(req.url)) return next(req);
+  const store = inject(DatasetStore);
+  return next(req).pipe(
+    tap((e) => {
+      if (e.type === HttpEventType.Response && e.ok) store.invalidate();
+    }),
+  );
 };
 
 /** Ends the session once when the server proves the JWT unusable. Plain 403s never sign out. */
