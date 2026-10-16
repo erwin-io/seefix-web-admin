@@ -17,6 +17,7 @@ import { CacheSyncService } from '@app/core/data/cache-sync.service';
 import { MAINTENANCE, PROCUREMENT_READERS, ROLE_LABEL, Role, WORK_ROLES } from '@app/core/models/user.model';
 import { Notification } from '@app/core/notifications/notification.model';
 import { NotificationService } from '@app/core/notifications/notification.service';
+import { SpotlightLauncherComponent } from '../spotlight/spotlight-launcher.component';
 import { UiService } from '@app/shared/services/ui.service';
 import { entityLink } from '@app/shared/utils/entity-link';
 import { AssistantLauncherComponent } from '../assistant/assistant-launcher.component';
@@ -34,6 +35,7 @@ const NAV: NavItem[] = [
   { label: 'Review Queue', icon: 'fact_check', link: '/maintenance/review-queue', roles: MAINTENANCE },
   { label: 'Reports', icon: 'report', link: '/maintenance/reports', roles: MAINTENANCE },
   { label: 'Work Orders', icon: 'construction', link: '/work-orders', roles: WORK_ROLES },
+  { label: 'Campus Map', icon: 'map', link: '/map', roles: WORK_ROLES },
   { label: 'Procurement', icon: 'local_shipping', link: '/procurement/inbox', roles: PROCUREMENT_READERS },
   { label: 'Users', icon: 'group', link: '/admin/users', roles: ['ADMIN'] },
   { label: 'AI Knowledge', icon: 'psychology', link: '/admin/knowledge', roles: ['ADMIN'] },
@@ -43,7 +45,8 @@ const NAV: NavItem[] = [
   selector: 'app-shell',
   imports: [
     RouterOutlet, RouterLink, RouterLinkActive, DatePipe, MatSidenavModule, MatToolbarModule, MatListModule,
-    MatIconModule, MatButtonModule, MatBadgeModule, MatMenuModule, MatTooltipModule, AssistantLauncherComponent,
+    MatIconModule, MatButtonModule, MatBadgeModule, MatMenuModule, MatTooltipModule, SpotlightLauncherComponent,
+    AssistantLauncherComponent,
   ],
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.scss',

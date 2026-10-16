@@ -163,10 +163,11 @@ export class DatasetStore {
     inject(SessionService).onReset(() => this.clear());
   }
 
-  get<T>(def: DatasetDef<T>): Dataset<T> {
+  /** `fetchPage` replaces the paged GET for a resource that is not a paged list (e.g. one analytics snapshot). */
+  get<T>(def: DatasetDef<T>, fetchPage?: (page: number, signal: AbortSignal) => Promise<PageResponse<T>>): Dataset<T> {
     let set = this.sets.get(def.key) as Dataset<T> | undefined;
     if (!set) {
-      set = new Dataset<T>(def, (page, signal) => this.page<T>(def.path, page, signal), () => this.onActivity());
+      set = new Dataset<T>(def, fetchPage ?? ((page, signal) => this.page<T>(def.path, page, signal)), () => this.onActivity());
       this.sets.set(def.key, set as Dataset<unknown>);
     }
     return set;
@@ -187,8 +188,13 @@ export class DatasetStore {
   }
 
   private page<T>(path: string, page: number, signal: AbortSignal): Promise<PageResponse<T>> {
-    const req: Observable<PageResponse<T>> = this.http
-      .get<Page<T>>(apiUrl(path), { params: { page, pageSize: PAGE_SIZE }, observe: 'response' })
+    return this.request<Page<T>>(path, { page, pageSize: PAGE_SIZE }, signal);
+  }
+
+  /** One GET with the body and its `X-Data-Versions` stamp, cancelled by `signal`. */
+  request<B>(path: string, params: Record<string, string | number>, signal: AbortSignal): Promise<{ body: B; versions: string | null }> {
+    const req: Observable<{ body: B; versions: string | null }> = this.http
+      .get<B>(apiUrl(path), { params, observe: 'response' })
       .pipe(
         timeout(environment.requestTimeoutMs),
         map((res) => ({ body: res.body!, versions: res.headers.get('X-Data-Versions') })),

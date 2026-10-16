@@ -34,10 +34,12 @@
               }
             ],
             "styles": [
-              "src/styles.scss"
+              "src/styles.scss",
+              "node_modules/leaflet/dist/leaflet.css"
             ],
             "allowedCommonJsDependencies": [
-              "pusher-js"
+              "pusher-js",
+              "leaflet"
             ]
           },
           "configurations": {

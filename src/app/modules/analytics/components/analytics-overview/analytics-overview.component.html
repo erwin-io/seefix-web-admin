@@ -1,0 +1,120 @@
+<section class="card analytics" aria-labelledby="analytics-title">
+  <header>
+    <div>
+      <h2 id="analytics-title">Analytics</h2>
+      @if (overview(); as o) {
+        <p class="sub">{{ o.from }} to {{ o.to }} (UTC, both days included)</p>
+      }
+    </div>
+    <button mat-stroked-button (click)="data.reload()" [disabled]="data.loading()"><mat-icon>refresh</mat-icon>Refresh</button>
+  </header>
+
+  <div class="filters" role="group" aria-label="Date range">
+    <mat-button-toggle-group [value]="preset()" aria-label="Quick ranges" hideSingleSelectionIndicator>
+      @for (d of presets; track d) {
+        <mat-button-toggle [value]="d" (click)="usePreset(d)">Last {{ d }} days</mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+    <form class="custom" (submit)="$event.preventDefault(); applyDraft()">
+      <mat-form-field subscriptSizing="dynamic">
+        <mat-label>From</mat-label>
+        <input matInput type="date" name="from" [value]="draft().from" (input)="setDraft('from', $any($event.target).value)" />
+      </mat-form-field>
+      <mat-form-field subscriptSizing="dynamic">
+        <mat-label>To</mat-label>
+        <input matInput type="date" name="to" [value]="draft().to" (input)="setDraft('to', $any($event.target).value)" />
+      </mat-form-field>
+      <button mat-flat-button type="submit" [disabled]="!!draftError()">Apply</button>
+    </form>
+    @if (draftError()) {
+      <p class="range-error" role="alert">{{ draftError() }}</p>
+    }
+  </div>
+
+  @if (sync.offline() && data.loadedAt()) {
+    <div class="banner warn" role="status">
+      <mat-icon>cloud_off</mat-icon>
+      <span>Can't reach the server. Showing figures as loaded at {{ data.loadedAt() | date: 'shortTime' }}.</span>
+    </div>
+  }
+  @if (data.loading()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+  <app-page-state
+    [loading]="data.loading() && !overview()"
+    [error]="overview() ? null : data.error()"
+    (retry)="data.reload()"
+    icon="insights"
+  />
+  @if (overview() && data.error()) {
+    <div class="banner error" role="alert">
+      <mat-icon>error_outline</mat-icon><span>{{ data.error() }} Showing the previous figures.</span>
+    </div>
+  }
+
+  @if (overview()) {
+    @let s = sections();
+    @if (s.reports; as r) {
+      <section class="block" data-section="reports" aria-labelledby="a-reports">
+        <h3 id="a-reports">Reports</h3>
+        <div class="tiles">
+          <app-stat-card label="Reports created" [value]="r.created" />
+        </div>
+        <div class="split">
+          <app-day-chart [points]="r.perDay" [from]="overview()!.from" [to]="overview()!.to" />
+          <app-bar-list title="By current status" [counts]="r.byStatus" />
+          <app-bar-list title="By category" [counts]="r.byCategory" />
+        </div>
+      </section>
+    }
+    @if (s.queueAging; as q) {
+      <section class="block" data-section="queueAging" aria-labelledby="a-queue">
+        <h3 id="a-queue">Review queue now</h3>
+        <p class="note">Reports waiting for human review today, by age. Not limited to the date range.</p>
+        <div class="tiles">
+          <app-stat-card label="Waiting for review" [value]="q.total" />
+          <app-stat-card label="Under 1 day" [value]="q.under1d" />
+          <app-stat-card label="1–3 days" [value]="q.d1to3" />
+          <app-stat-card label="3–7 days" [value]="q.d3to7" />
+          <app-stat-card label="Over 7 days" [value]="q.over7d" [alert]="true" />
+        </div>
+      </section>
+    }
+    @if (s.workOrders; as w) {
+      <section class="block" data-section="workOrders" aria-labelledby="a-wo">
+        <h3 id="a-wo">Work orders</h3>
+        <div class="tiles">
+          <app-stat-card label="Completed in range" [value]="w.completed" />
+          <app-stat-card label="Average turnaround" [value]="w.avgTurnaroundHours" unit="h" hint="Assigned → resolved" />
+          <app-stat-card label="Median turnaround" [value]="w.p50TurnaroundHours" unit="h" />
+          <app-stat-card label="Rework rate" [value]="w.reworkRate" unit="%" hint="Of completed in range" />
+        </div>
+        <app-bar-list title="All work orders by current status" [counts]="w.byStatus" />
+      </section>
+    }
+    @if (s.procurement; as p) {
+      <section class="block" data-section="procurement" aria-labelledby="a-proc">
+        <h3 id="a-proc">Procurement</h3>
+        <div class="tiles">
+          <app-stat-card label="Open handoffs" [value]="p.open" />
+          <app-stat-card label="Overdue" [value]="p.overdue" [alert]="true" hint="Open, past expected response" />
+          <app-stat-card label="Completed in range" [value]="p.completed" />
+          <app-stat-card label="Average time to outcome" [value]="p.avgDaysToOutcome" unit="days" />
+        </div>
+        <app-bar-list title="All handoffs by current status" [counts]="p.byStatus" />
+      </section>
+    }
+    @if (s.agent; as a) {
+      <section class="block" data-section="agent" aria-labelledby="a-agent">
+        <h3 id="a-agent">AI screening</h3>
+        <div class="tiles">
+          <app-stat-card label="Failed, needs a person" [value]="a.failedOpen" [alert]="true" hint="Now, any date" />
+          <app-stat-card label="Retried" [value]="a.retried" hint="More than one attempt" />
+          <app-stat-card label="Latency p50" [value]="a.latencyP50Seconds" unit="s" hint="Report created → screened" />
+          <app-stat-card label="Latency p95" [value]="a.latencyP95Seconds" unit="s" />
+        </div>
+        <app-bar-list title="Reports in range by screening status" [counts]="a.byStatus" />
+      </section>
+    }
+  }
+</section>
