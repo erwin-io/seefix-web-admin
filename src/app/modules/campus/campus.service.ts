@@ -18,8 +18,14 @@ export const MAP_MARKERS: DatasetDef<MapMarker> = {
 /** Leaflet, loaded only when a map is shown (keeps it out of the initial bundle). Tests provide a fake. */
 export const LEAFLET = new InjectionToken<() => Promise<typeof import('leaflet')>>('LEAFLET', {
   providedIn: 'root',
-  factory: () => () => import('leaflet'),
+  factory: () => () => import('leaflet').then(leafletApi),
 });
+
+type LeafletApi = typeof import('leaflet');
+/** Leaflet is CommonJS: production builds expose it only as the default export; the dev server also adds named ones. */
+export function leafletApi(module: LeafletApi | { default: LeafletApi }): LeafletApi {
+  return 'default' in module && typeof module.default?.map === 'function' ? module.default : (module as LeafletApi);
+}
 
 @Injectable({ providedIn: 'root' })
 export class CampusService {
