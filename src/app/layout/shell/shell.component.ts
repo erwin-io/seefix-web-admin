@@ -34,6 +34,7 @@ const NAV: NavItem[] = [
   { label: 'Review Queue', icon: 'fact_check', link: '/maintenance/review-queue', roles: MAINTENANCE },
   { label: 'Reports', icon: 'report', link: '/maintenance/reports', roles: MAINTENANCE },
   { label: 'Work Orders', icon: 'construction', link: '/work-orders', roles: WORK_ROLES },
+  { label: 'Campus Map', icon: 'map', link: '/map', roles: WORK_ROLES },
   { label: 'Procurement', icon: 'local_shipping', link: '/procurement/inbox', roles: PROCUREMENT_READERS },
   { label: 'Users', icon: 'group', link: '/admin/users', roles: ['ADMIN'] },
   { label: 'AI Knowledge', icon: 'psychology', link: '/admin/knowledge', roles: ['ADMIN'] },

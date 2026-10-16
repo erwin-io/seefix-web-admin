@@ -12,6 +12,7 @@ import { ACTION_CENTER, REVIEW_QUEUE } from '@app/modules/maintenance/maintenanc
 import { PROCUREMENT_INBOX } from '@app/modules/procurement/procurement.service';
 import { WorkOrderItem } from '@app/modules/work-orders/work-orders.models';
 import { WORK_ORDERS } from '@app/modules/work-orders/work-orders.service';
+import { AnalyticsOverviewComponent } from '@app/modules/analytics/components/analytics-overview/analytics-overview.component';
 import { SHARED_IMPORTS } from '@app/shared/shared.imports';
 import { entityLink } from '@app/shared/utils/entity-link';
 
@@ -26,7 +27,7 @@ interface Metric {
 /** Every number is counted from an existing list endpoint; no stats API, no invented KPIs. */
 @Component({
   selector: 'app-dashboard-page',
-  imports: [RouterLink, DatePipe, MatButtonModule, MatIconModule, ...SHARED_IMPORTS],
+  imports: [RouterLink, DatePipe, MatButtonModule, MatIconModule, AnalyticsOverviewComponent, ...SHARED_IMPORTS],
   styleUrl: './dashboard.page.scss',
   templateUrl: './dashboard.page.html',
 })
