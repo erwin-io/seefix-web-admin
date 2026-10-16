@@ -133,6 +133,8 @@ export class BuildingEditPage {
   readonly clickMode = signal<ClickMode>('vertex');
   /** The one point that can be dragged on the map (a perimeter index or the pin); null: none. */
   readonly moving = signal<number | 'pin' | null>(null);
+  /** Where the point being moved started (to confirm or undo the move). */
+  private movingFrom: { target: number | 'pin'; point: LatLng | null } | null = null;
   /** Campus map area: keeps this map inside the campus (admin endpoint; null on an older API). */
   readonly campusArea = signal<CampusArea | null>(null);
   readonly pasteText = signal('');
@@ -178,25 +180,55 @@ export class BuildingEditPage {
     });
   }
 
-  removeVertex(i: number): void {
+  async removeVertex(i: number): Promise<void> {
+    const p = this.form().perimeter[i];
+    if (!p || !(await this.ask(`Remove point ${i + 1}?`, `Point ${i + 1} (${p[0]}, ${p[1]}) is removed from the perimeter draft.`, 'Remove point', true))) return;
     const m = this.moving();
     if (typeof m === 'number') this.moving.set(m === i ? null : m > i ? m - 1 : m);
     this.form.update((f) => ({ ...f, perimeter: f.perimeter.filter((_, j) => j !== i) }));
   }
 
-  clearPerimeter(): void {
+  async clearPerimeter(): Promise<void> {
+    const n = this.form().perimeter.length;
+    if (!(await this.ask('Clear the perimeter?', `All ${n} points are removed from the draft.`, 'Clear perimeter', true))) return;
     if (typeof this.moving() === 'number') this.moving.set(null);
     this.patch({ perimeter: [] });
   }
 
-  clearPin(): void {
+  async clearPin(): Promise<void> {
+    if (!(await this.ask('Remove the default pin?', 'Reports without usable GPS will be shown at the outline centre instead.', 'Remove pin', true))) return;
     if (this.moving() === 'pin') this.moving.set(null);
     this.patch({ defaultLat: null, defaultLng: null });
   }
 
-  /** Make one point draggable on the map (pressing again, or Done, stops). Map clicks add nothing meanwhile. */
-  toggleMove(target: number | 'pin'): void {
-    this.moving.set(this.moving() === target ? null : target);
+  /**
+   * Make one point draggable on the map. Pressing it again (✓) or Done ends the move; if the point moved, the admin
+   * confirms keeping it and Cancel puts it back. Map clicks add nothing meanwhile.
+   */
+  async toggleMove(target: number | 'pin'): Promise<void> {
+    const current = this.moving();
+    if (current !== null) {
+      await this.stopMove();
+      if (current === target) return; // the ✓ of this point only ends its move
+    }
+    this.movingFrom = { target, point: this.pointOf(target) };
+    this.moving.set(target);
+  }
+
+  /** Ends the current move: keeps a changed point only after confirmation, otherwise restores it. */
+  async stopMove(): Promise<void> {
+    const target = this.moving();
+    const from = this.movingFrom;
+    this.movingFrom = null;
+    if (target === null) return;
+    const now = this.pointOf(target);
+    const start = from?.target === target ? from.point : null;
+    if (start && now && (now[0] !== start[0] || now[1] !== start[1])) {
+      const label = target === 'pin' ? 'the default pin' : `point ${target + 1}`;
+      const keep = await this.ask(`Keep ${label} here?`, `Move ${label} from ${start[0]}, ${start[1]} to ${now[0]}, ${now[1]}. Cancel puts it back.`, 'Keep new position');
+      if (!keep) this.draftMoved({ target, point: start, done: true });
+    }
+    this.moving.set(null);
   }
 
   /** A drag on the map: the point's latitude and longitude follow it live. */
@@ -212,15 +244,28 @@ export class BuildingEditPage {
     else if (this.clickMode() === 'vertex' && this.form().perimeter.length < MAX_VERTICES) this.patch({ perimeter: [...this.form().perimeter, p] });
   }
 
-  applyPaste(): void {
+  async applyPaste(): Promise<void> {
     const pts = parsePoints(this.pasteText());
     if (!pts) return this.pasteError.set('Use [[lat, lng], …] or one "lat, lng" pair per line.');
     this.pasteError.set(null);
+    if (!(await this.ask('Replace the perimeter?', `The current ${this.form().perimeter.length} points are replaced by the ${pts.length} pasted points.`, 'Replace perimeter', true))) return;
     this.patch({ perimeter: pts });
   }
 
   async save(): Promise<void> {
     if (!this.valid() || this.saving()) return;
+    if (this.moving() !== null) await this.stopMove();
+    const name = this.form().name.trim();
+    const ok = this.creating()
+      ? await this.ask(`Create building "${name}"?`, 'It is added to Building settings and, if active, shown on the campus map.', 'Create building')
+      : await this.ask(
+          `Save changes to "${name}"?`,
+          this.geometryChanged()
+            ? `The location changes are saved as geometry revision ${(this.base()?.geometryRevision ?? 0) + 1} and recorded in the history.`
+            : 'Only the building details change; its location stays the same.',
+          'Save changes',
+        );
+    if (!ok || this.saving()) return;
     this.saving.set(true);
     this.saveError.set(null);
     try {
@@ -267,6 +312,7 @@ export class BuildingEditPage {
     this.base.set(latest);
     this.form.set({ ...mine, ...pick(theirs, GEOMETRY_KEYS) });
     this.moving.set(null);
+    this.movingFrom = null;
     this.conflict.set(null);
   }
 
@@ -284,14 +330,29 @@ export class BuildingEditPage {
     if (this.conflict()) this.conflict.set({ latest });
   }
 
+  /** Shared confirm (Cancel and Escape resolve false: nothing is written). */
+  private async ask(title: string, message: string, confirm: string, danger = false): Promise<boolean> {
+    return !!(await this.ui.confirm({ title, message, confirm, danger }));
+  }
+
+  private pointOf(target: number | 'pin'): LatLng | null {
+    return pickPoint(this.form(), target);
+  }
+
   private reset(b: Building): void {
     this.base.set(b);
     this.form.set(formOf(b));
     this.conflict.set(null);
     this.moving.set(null);
+    this.movingFrom = null;
     // An outlined building opens in "Pan only": points are added only after choosing "Add perimeter point".
     this.clickMode.set(b.perimeter?.length ? null : 'vertex');
   }
+}
+
+function pickPoint(f: BuildingForm, target: number | 'pin'): LatLng | null {
+  if (target === 'pin') return f.defaultLat !== null && f.defaultLng !== null ? [f.defaultLat, f.defaultLng] : null;
+  return f.perimeter[target] ? [f.perimeter[target][0], f.perimeter[target][1]] : null;
 }
 
 function pick<T, K extends keyof T>(obj: T, keys: readonly K[]): Pick<T, K> {
