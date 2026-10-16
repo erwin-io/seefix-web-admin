@@ -2,6 +2,8 @@ import { DatePipe } from '@angular/common';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { provideNativeDateAdapter } from '@angular/material/core';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -14,6 +16,7 @@ import { AnalyticsService, lastDays, rangeError } from '../../analytics.service'
 import { BarListComponent } from '../bar-list/bar-list.component';
 import { DayChartComponent } from '../day-chart/day-chart.component';
 import { StatCardComponent } from '../stat-card/stat-card.component';
+import { chartTone } from '../../tones';
 
 export const PRESETS = [7, 30, 90] as const;
 
@@ -24,9 +27,10 @@ export const PRESETS = [7, 30, 90] as const;
 @Component({
   selector: 'app-analytics-overview',
   imports: [
-    DatePipe, MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule,
-    PageStateComponent, StatCardComponent, BarListComponent, DayChartComponent,
+    DatePipe, MatButtonModule, MatButtonToggleModule, MatDatepickerModule, MatFormFieldModule, MatIconModule, MatInputModule,
+    MatProgressBarModule, PageStateComponent, StatCardComponent, BarListComponent, DayChartComponent,
   ],
+  providers: [provideNativeDateAdapter()],
   templateUrl: './analytics-overview.component.html',
   styleUrl: './analytics-overview.component.scss',
 })
@@ -34,6 +38,9 @@ export class AnalyticsOverviewComponent {
   private readonly analytics = inject(AnalyticsService);
   readonly sync = inject(CacheSyncService);
   readonly presets = PRESETS;
+  readonly chartTone = chartTone;
+  /** Ranges end today at the latest (the API's range is UTC calendar days). */
+  readonly today = new Date();
   readonly data = this.analytics.overview();
   readonly overview = computed(() => this.data.rows()[0] ?? null);
   readonly sections = computed(() => this.overview()?.sections ?? {});
@@ -50,6 +57,16 @@ export class AnalyticsOverviewComponent {
 
   usePreset(days: number): void {
     this.apply(lastDays(days));
+  }
+
+  /** 'YYYY-MM-DD' ↔ the picker's local calendar date (no time-zone shift: both are plain calendar days). */
+  asDate(value: string): Date | null {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value ?? '');
+    return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
+  }
+
+  iso(d: Date | null): string {
+    return d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : '';
   }
 
   setDraft(part: keyof DateRange, value: string): void {

@@ -1,7 +1,8 @@
 .sub { margin: 2px 0 0; color: var(--sf-muted); font-size: 13px; }
 .filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 12px; }
 .custom { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.custom mat-form-field { width: 170px; }
+.custom mat-form-field { width: 260px; }
+.custom input[readonly] { cursor: pointer; }
 .range-error { color: var(--sf-danger); margin: 0; flex-basis: 100%; font-size: 13px; }
 .block { border-top: 1px solid var(--sf-border); padding-top: 16px; margin-top: 16px; }
 .block > h3 { margin: 0 0 8px; font-size: 15px; font-weight: 600; }

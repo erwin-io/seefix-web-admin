@@ -1,4 +1,5 @@
-import { Component, input } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
+import { TONE_COLOR, Tone } from '../../tones';
 
 /** One server number. Shown exactly as returned; `null` (no data in the range) shows a dash. */
 @Component({
@@ -6,7 +7,7 @@ import { Component, input } from '@angular/core';
   template: `
     <div class="stat" [class.alert]="alert() && !!value()">
       <span class="label">{{ label() }}</span>
-      <strong class="value">
+      <strong class="value" [style.color]="color()">
         @if (value() === null || value() === undefined) {
           <span aria-label="No data">—</span>
         } @else {
@@ -38,4 +39,11 @@ export class StatCardComponent {
   readonly hint = input('');
   /** Outline in the danger colour when the value is non-zero (overdue, failed). */
   readonly alert = input(false);
+  /** Value colour when it is non-zero (a zero is never shown as an alarm). The label carries the meaning too. */
+  readonly tone = input<Tone | null>(null);
+  readonly color = computed(() => {
+    const t = this.tone();
+    const v = this.value();
+    return t && typeof v === 'number' && v > 0 ? TONE_COLOR[t] : null;
+  });
 }
