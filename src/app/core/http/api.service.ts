@@ -18,9 +18,10 @@ export class ApiService {
     return this.http.get<T>(apiUrl(path), { params: toParams(params) }).pipe(normalize(environment.requestTimeoutMs));
   }
 
-  post<T>(path: string, body: unknown = {}, opts: { skipAuth?: boolean } = {}): Observable<T> {
+  /** `timeoutMs`: only for calls the API itself lets run longer than the default (e.g. the assistant's Agent wait). */
+  post<T>(path: string, body: unknown = {}, opts: { skipAuth?: boolean; timeoutMs?: number } = {}): Observable<T> {
     const context = opts.skipAuth ? new HttpContext().set(SKIP_AUTH, true) : undefined;
-    return this.http.post<T>(apiUrl(path), body, { context }).pipe(normalize(environment.requestTimeoutMs));
+    return this.http.post<T>(apiUrl(path), body, { context }).pipe(normalize(opts.timeoutMs ?? environment.requestTimeoutMs));
   }
 
   patch<T>(path: string, body: unknown): Observable<T> {
