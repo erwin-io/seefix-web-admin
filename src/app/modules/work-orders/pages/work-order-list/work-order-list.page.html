@@ -17,6 +17,7 @@
   icon="construction"
   (rowClick)="open($event)"
 >
+  <app-date-range-filter tableFilters label="Created" [(range)]="created" />
   <mat-form-field tableFilters subscriptSizing="dynamic">
     <mat-label>Status</mat-label>
     <mat-select [ngModel]="filter()" (ngModelChange)="filter.set($event)">
@@ -37,6 +38,10 @@
   <ng-container matColumnDef="party">
     <th mat-header-cell *matHeaderCellDef mat-sort-header>Assigned to</th>
     <td mat-cell *matCellDef="let w">{{ w.assignedPartyName ?? 'Unassigned' }}<span class="sub">{{ w.responsibleLeadName }}</span></td>
+  </ng-container>
+  <ng-container matColumnDef="created">
+    <th mat-header-cell *matHeaderCellDef mat-sort-header start="desc">Created</th>
+    <td mat-cell *matCellDef="let w">{{ (w.createdAt | date: 'MMM d, y') ?? '—' }}</td>
   </ng-container>
   <ng-container matColumnDef="dates">
     <th mat-header-cell *matHeaderCellDef mat-sort-header>Planned / deadline</th>

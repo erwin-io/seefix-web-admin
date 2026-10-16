@@ -20,6 +20,7 @@
   icon="local_shipping"
   (rowClick)="open($event)"
 >
+  <app-date-range-filter tableFilters label="Submitted" [(range)]="submitted" />
   <mat-button-toggle-group tableFilters [value]="view()" (change)="view.set($event.value)" hideSingleSelectionIndicator aria-label="Handoff status">
     <mat-button-toggle value="open">Open</mat-button-toggle>
     <mat-button-toggle value="all">All</mat-button-toggle>

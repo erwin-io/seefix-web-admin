@@ -24,6 +24,7 @@
     <mat-button-toggle value="actionable">Actionable</mat-button-toggle>
     <mat-button-toggle value="screening">Screening</mat-button-toggle>
   </mat-button-toggle-group>
+  <app-date-range-filter tableFilters label="Submitted" [(range)]="submitted" />
   <mat-form-field tableFilters subscriptSizing="dynamic">
     <mat-label>Status</mat-label>
     <mat-select [ngModel]="status()" (ngModelChange)="status.set($event)">
