@@ -39,7 +39,7 @@ describe('fetchAll', () => {
     };
     const res = await fetchAll(fetchPage, idOf, { signal: signal() });
     expect(calls).toEqual([1]);
-    expect(res).toEqual({ rows: data, pages: 1, restarted: false });
+    expect(res).toEqual({ rows: data, pages: 1, restarted: false, versions: null });
   });
 
   for (const size of [0, 1, 250, 500, 501, 10_234]) {

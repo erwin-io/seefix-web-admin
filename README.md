@@ -143,8 +143,13 @@ the record afterwards, so a 409 shows the server's current state.
 2. Staff lists load **every page** (`?page&pageSize=500`, seefix-api#22) into memory for the signed-in user, then
    sort/filter/page locally (`app-data-table`, zero list calls). They reload on Refresh, after the user's own writes
    and on logout/account switch. Needs an API with list paging; without it page 1 is the legacy capped list.
-3. Realtime only signals notifications; lists don't yet react to other users' changes (`DatasetStore.invalidate()`
-   is the hook for #18).
+3. Lists follow other users' changes through `CacheSyncService` (#18): it polls `GET /api/sync/versions` every 60 s
+   while Pusher is live and every 30 s otherwise (plus on tab resume, module entry, Refresh and a `data.changed`
+   hint), and reloads a list whose domain version is newer than the `X-Data-Versions` it was loaded from: at once if
+   on screen, else on next view. Before the API's cache migration (`available: false`) lists older than 5 min reload
+   instead. The role channel for `data.changed` hints is subscribed only once `/api/realtime/config` returns
+   `roleChannel` (not shipped server-side yet), so today the poll does the work. While the API is unreachable the
+   lists keep their rows under a "may be out of date" banner; buttons are not disabled (the server still decides).
 4. No Buildings/Locations admin endpoints.
 
 Unit tests use HTTP mocks; they don't call a live API.

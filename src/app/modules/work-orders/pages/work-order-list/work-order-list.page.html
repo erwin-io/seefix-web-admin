@@ -3,7 +3,7 @@
     <h1>{{ session.has('WORKER') ? 'My Work Orders' : 'Work Orders' }}</h1>
     <p>{{ session.has('WORKER') ? 'Work orders where you are the responsible lead.' : 'All work orders, newest first.' }}</p>
   </div>
-  <div class="actions"><button mat-stroked-button (click)="data.refresh()"><mat-icon>refresh</mat-icon>Refresh</button></div>
+  <div class="actions"><button mat-stroked-button (click)="data.reload()"><mat-icon>refresh</mat-icon>Refresh</button></div>
 </div>
 
 <app-data-table

@@ -15,6 +15,19 @@ export const MEMORY_WARNING_ROWS = 25000;
 /** Cache-version domains (seefix-api docs/V2_CACHE_SYNC.md §5). */
 export type Domain = 'reports' | 'work_orders' | 'procurement' | 'action_items' | 'users' | 'reference';
 
+/** Domain → version, from `X-Data-Versions` (`reports:41|reference:5`) or `GET /api/sync/versions`. */
+export type Versions = Partial<Record<Domain, number>>;
+
+export function parseStamp(stamp: string | null): Versions | null {
+  if (!stamp) return null;
+  const out: Versions = {};
+  for (const part of stamp.split('|')) {
+    const [domain, n] = part.split(':');
+    if (domain && Number.isFinite(Number(n))) out[domain as Domain] = Number(n);
+  }
+  return out;
+}
+
 export interface DatasetDef<T> {
   /** Cache key, unique per endpoint. */
   key: string;
@@ -35,6 +48,8 @@ export class Dataset<T> {
   /** The last load ended with some pages missing (rows are incomplete). */
   readonly partial = signal(false);
   readonly loadedAt = signal<number | null>(null);
+  /** Versions the loaded rows were built from (null: API sent no stamp). */
+  versions: Versions | null = null;
   private stale = true;
   private users = 0;
   private abort?: AbortController;
@@ -43,11 +58,18 @@ export class Dataset<T> {
   constructor(
     readonly def: DatasetDef<T>,
     private readonly fetchPage: (page: number, signal: AbortSignal) => Promise<PageResponse<T>>,
+    private readonly onReload: () => void = () => undefined,
   ) {}
 
   /** Loads once; later calls reuse memory until stale. */
   ensure(): Promise<void> {
     return this.stale ? (this.pending ?? this.refresh()) : (this.pending ?? Promise.resolve());
+  }
+
+  /** The user's Refresh button: reload this list and check the other modules' versions too. */
+  reload(): Promise<void> {
+    this.onReload();
+    return this.refresh();
   }
 
   refresh(): Promise<void> {
@@ -67,6 +89,7 @@ export class Dataset<T> {
         (res) => {
           if (ctrl.signal.aborted) return; // logged out / superseded between the last page and here
           this.rows.set(res.rows);
+          this.versions = parseStamp(res.versions);
           this.partial.set(false);
           this.loadedAt.set(Date.now());
         },
@@ -92,7 +115,7 @@ export class Dataset<T> {
     return run;
   }
 
-  /** Staleness hook (own mutations now, Pusher / version poll in #18): reload now if on screen, else on next view. */
+  /** Staleness hook (own mutations, CacheSyncService): reload now if on screen, else on next view. */
   invalidate(): void {
     this.stale = true;
     if (this.users > 0) void this.refresh();
@@ -107,6 +130,11 @@ export class Dataset<T> {
         this.stale = true;
       }
     });
+  }
+
+  /** Loaded, not stale and not loading: the only state a version change can make out of date. */
+  get settled(): boolean {
+    return !this.stale && !this.pending;
   }
 
   /** Logout / account switch: cancel and forget everything. */
@@ -128,6 +156,8 @@ export class Dataset<T> {
 export class DatasetStore {
   private readonly http = inject(HttpClient);
   private readonly sets = new Map<string, Dataset<unknown>>();
+  /** Set by CacheSyncService: a page was entered or reloaded by hand, so check versions soon. */
+  onActivity: () => void = () => undefined;
 
   constructor() {
     inject(SessionService).onReset(() => this.clear());
@@ -136,15 +166,19 @@ export class DatasetStore {
   get<T>(def: DatasetDef<T>): Dataset<T> {
     let set = this.sets.get(def.key) as Dataset<T> | undefined;
     if (!set) {
-      set = new Dataset<T>(def, (page, signal) => this.page<T>(def.path, page, signal));
+      set = new Dataset<T>(def, (page, signal) => this.page<T>(def.path, page, signal), () => this.onActivity());
       this.sets.set(def.key, set as Dataset<unknown>);
     }
     return set;
   }
 
-  /** For #18: mark datasets depending on these domains stale. No argument = all (after the user's own write). */
+  /** Mark datasets depending on these domains stale. No argument = all (after the user's own write). */
   invalidate(domains?: Domain[]): void {
-    for (const set of this.sets.values()) if (!domains || set.def.domains.some((d) => domains.includes(d))) set.invalidate();
+    this.invalidateWhere((set) => !domains || set.def.domains.some((d) => domains.includes(d)));
+  }
+
+  invalidateWhere(stale: (set: Dataset<unknown>) => boolean): void {
+    for (const set of this.sets.values()) if (stale(set)) set.invalidate();
   }
 
   clear(): void {
@@ -166,8 +200,10 @@ export class DatasetStore {
 
 /** Page helper (injection context): the dataset, loaded on first view, its load cancelled when the page goes away. */
 export function useDataset<T>(def: DatasetDef<T>): Dataset<T> {
-  const set = inject(DatasetStore).get(def);
+  const store = inject(DatasetStore);
+  const set = store.get(def);
   set.attach(inject(DestroyRef));
   void set.ensure();
+  store.onActivity(); // module entry: hidden-module changes are caught by the next version check
   return set;
 }

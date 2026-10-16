@@ -17,4 +17,6 @@ export interface RealtimeConfig {
   key: string | null;
   cluster: string | null;
   userChannel: string;
+  /** `private-role-<ROLE>` for `data.changed` hints, once seefix-api ships it (V2_CACHE_SYNC §6). */
+  roleChannel?: string | null;
 }

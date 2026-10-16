@@ -25,6 +25,7 @@ export class NotificationService {
   /** Bumped by stop(): async work started under an older run must not touch state (issue #10). */
   private run = 0;
   private lastRead = 0;
+  private readonly hints = new Set<() => void>();
 
   readonly items = signal<Notification[]>([]);
   readonly loading = signal(false);
@@ -57,6 +58,14 @@ export class NotificationService {
     }
   }
 
+  /**
+   * `data.changed` hint (seefix-api docs/V2_CACHE_SYNC.md §6) or a (re)connect that may have missed one. The
+   * payload is ignored on purpose: listeners only re-check `GET /api/sync/versions`, which stays the authority.
+   */
+  onDataChanged(fn: () => void): void {
+    this.hints.add(fn);
+  }
+
   async markRead(n: Notification): Promise<void> {
     if (n.isRead) return;
     await firstValueFrom(this.api.post(`/api/notifications/${n.id}/read`));
@@ -86,6 +95,10 @@ export class NotificationService {
       // Callbacks already queued when this run ended must not touch the next session's state.
       const ifCurrent = <T>(fn: (arg: T) => void) => (arg: T) => run === this.run && fn(arg);
       channel.bind('notification.created', ifCurrent(() => void this.load()));
+      const hint = ifCurrent(() => this.hints.forEach((fn) => fn()));
+      channel.bind('data.changed', hint);
+      // Role channel only once the API advertises it (authorized server-side by role); hints carry no record data.
+      if (cfg.roleChannel) pusher.subscribe(cfg.roleChannel).bind('data.changed', hint);
       // Live only once the private channel is authorized; auth failure or a drop hands back to polling.
       channel.bind('pusher:subscription_succeeded', ifCurrent(() => this.setLive(pusher.connection.state === 'connected')));
       channel.bind('pusher:subscription_error', ifCurrent(() => this.live.set(false)));
@@ -114,7 +127,10 @@ export class NotificationService {
 
   /** Re-read on every (re)connect to catch events missed while offline. */
   private setLive(live: boolean): void {
-    if (live && !this.live()) void this.load();
+    if (live && !this.live()) {
+      void this.load();
+      this.hints.forEach((fn) => fn());
+    }
     this.live.set(live);
   }
 

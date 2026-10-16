@@ -18,10 +18,16 @@
   </span>
 </div>
 
+@if (sync.offline() && dataset().loadedAt()) {
+  <div class="banner warn" role="status">
+    <mat-icon>cloud_off</mat-icon>
+    <span>Can't reach the server. Showing the list as loaded at {{ dataset().loadedAt() | date: 'shortTime' }}; it may be out of date and changes may not save.</span>
+  </div>
+}
 @if (dataset().partial()) {
   <div class="banner error" role="alert">
     <mat-icon>error_outline</mat-icon><span>{{ dataset().error() }}</span>
-    <button mat-stroked-button (click)="dataset().refresh()">Retry</button>
+    <button mat-stroked-button (click)="dataset().reload()">Retry</button>
   </div>
 }
 @if (dataset().rows().length > memoryWarningRows) {

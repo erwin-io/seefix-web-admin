@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { AfterContentInit, Component, ContentChildren, QueryList, ViewChild, computed, effect, inject, input, output, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -8,6 +9,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSort } from '@angular/material/sort';
 import { MatColumnDef, MatTable, MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { Dataset, MEMORY_WARNING_ROWS } from '@app/core/data/dataset.store';
+import { CacheSyncService } from '@app/core/data/cache-sync.service';
 import { PageStateComponent } from '../page-state/page-state.component';
 
 export type SortValue = string | number | null | undefined;
@@ -25,7 +27,7 @@ export function newestFirst<T>(createdAt: (row: T) => string | null, id: (row: T
 @Component({
   selector: 'app-data-table',
   hostDirectives: [MatSort],
-  imports: [MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatPaginatorModule, MatProgressBarModule, MatTableModule, PageStateComponent],
+  imports: [DatePipe, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatPaginatorModule, MatProgressBarModule, MatTableModule, PageStateComponent],
   templateUrl: './data-table.component.html',
   styleUrl: './data-table.component.scss',
 })
@@ -51,6 +53,7 @@ export class DataTableComponent<T> implements AfterContentInit {
   @ViewChild(MatPaginator, { static: true }) private readonly paginator!: MatPaginator;
 
   readonly sort = inject(MatSort);
+  readonly sync = inject(CacheSyncService);
   readonly memoryWarningRows = MEMORY_WARNING_ROWS;
   readonly source = new MatTableDataSource<T>([]);
   readonly query = signal('');
