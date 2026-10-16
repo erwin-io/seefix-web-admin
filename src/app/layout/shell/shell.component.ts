@@ -17,6 +17,7 @@ import { CacheSyncService } from '@app/core/data/cache-sync.service';
 import { MAINTENANCE, PROCUREMENT_READERS, ROLE_LABEL, Role, WORK_ROLES } from '@app/core/models/user.model';
 import { Notification } from '@app/core/notifications/notification.model';
 import { NotificationService } from '@app/core/notifications/notification.service';
+import { SpotlightLauncherComponent } from '../spotlight/spotlight-launcher.component';
 import { UiService } from '@app/shared/services/ui.service';
 import { entityLink } from '@app/shared/utils/entity-link';
 
@@ -42,7 +43,7 @@ const NAV: NavItem[] = [
   selector: 'app-shell',
   imports: [
     RouterOutlet, RouterLink, RouterLinkActive, DatePipe, MatSidenavModule, MatToolbarModule, MatListModule,
-    MatIconModule, MatButtonModule, MatBadgeModule, MatMenuModule, MatTooltipModule,
+    MatIconModule, MatButtonModule, MatBadgeModule, MatMenuModule, MatTooltipModule, SpotlightLauncherComponent,
   ],
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.scss',
