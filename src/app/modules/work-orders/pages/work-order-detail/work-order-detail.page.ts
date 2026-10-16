@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, OnDestroy, computed, inject, input, signal } from '@angular/core';
+import { Component, OnDestroy, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -138,6 +138,11 @@ export class WorkOrderDetailPage implements OnDestroy {
   });
 
   constructor() {
+    // The Reassign form shows the saved assignment (also after a reload or refresh), unless someone is editing it.
+    effect(() => {
+      const w = this.wo();
+      if (w && this.assignForm.pristine) untracked(() => this.prefillAssign());
+    });
     if (this.isStaff()) {
       firstValueFrom(this.workOrders.assignableUsers()).then(
         (r) => this.assignees.set(r.items),
@@ -160,6 +165,7 @@ export class WorkOrderDetailPage implements OnDestroy {
       responsibleLeadContact: w['ResponsibleLeadContact'] ?? '',
       responsibleLeadEmail: w['ResponsibleLeadEmail'] ?? '',
     });
+    this.assignForm.markAsPristine(); // matches the server again: later refreshes may update it
   }
 
   pickLead(id: string): void {
@@ -188,6 +194,10 @@ export class WorkOrderDetailPage implements OnDestroy {
           reason: v.reason || undefined,
         }),
       'Work order assigned.',
+      () => {
+        this.assignForm.controls.reason.reset('');
+        this.assignForm.markAsPristine(); // the reload below then shows what the server saved
+      },
     );
   }
 
