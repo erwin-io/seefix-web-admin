@@ -1,0 +1,114 @@
+<h2 id="spot-title" class="cdk-visually-hidden">Search SEEFIX</h2>
+<div class="field">
+  <mat-icon aria-hidden="true">search</mat-icon>
+  <input
+    class="spot-input"
+    type="search"
+    role="combobox"
+    aria-autocomplete="list"
+    aria-controls="spot-list"
+    aria-describedby="spot-hint"
+    aria-label="Search reports, work orders, procurement, users and buildings"
+    [attr.aria-expanded]="options().length > 0"
+    [attr.aria-activedescendant]="activeId()"
+    [attr.maxlength]="max"
+    [value]="query()"
+    (input)="onInput($any($event.target).value)"
+    (keydown)="onKey($event)"
+    placeholder="Search reports, work orders, procurement, users…"
+    autocomplete="off"
+    spellcheck="false"
+  />
+  <kbd aria-hidden="true">Esc</kbd>
+</div>
+@if (current().status === 'loading') {
+  <mat-progress-bar mode="indeterminate" aria-hidden="true" />
+}
+<p id="spot-hint" class="cdk-visually-hidden">
+  Use the up and down arrow keys to move through results, Enter to open, Escape to close.
+  @if (blank()) {
+    Press Delete to remove a recent search.
+  }
+</p>
+<div class="cdk-visually-hidden" role="status" aria-live="polite">{{ announce() }}</div>
+
+<div class="body">
+  @if (blank()) {
+    @if (recents.items().length) {
+      <div class="section-head">
+        <span id="spot-recent-label">Recent searches</span>
+        <button mat-button type="button" class="clear-all" (click)="recents.clear()">Clear all</button>
+      </div>
+      <div id="spot-list" role="listbox" aria-labelledby="spot-recent-label">
+        @for (q of recents.items(); track q; let i = $index) {
+          <div class="row-wrap" role="none">
+            <div
+              class="row"
+              role="option"
+              [id]="'spot-recent-' + i"
+              [class.active]="i === active()"
+              [attr.aria-selected]="i === active()"
+              (click)="chooseById('spot-recent-' + i)"
+              (mouseenter)="active.set(i)"
+            >
+              <mat-icon aria-hidden="true">history</mat-icon>
+              <span class="title">{{ q }}</span>
+            </div>
+            <button
+              mat-icon-button
+              type="button"
+              class="remove"
+              tabindex="-1"
+              [attr.aria-label]="'Remove ' + q + ' from recent searches'"
+              (click)="removeRecent(q)"
+            >
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        }
+      </div>
+    } @else {
+      <p class="note">Search across reports, maintenance requests, work orders, procurement, users and buildings.</p>
+    }
+  } @else if (tooShort()) {
+    <p class="note">Type at least 2 characters.</p>
+  } @else if (current().status === 'error') {
+    <div class="note error" role="alert">
+      <span>{{ current().error }}</span>
+      <button mat-button type="button" (click)="retry()">Try again</button>
+    </div>
+  } @else if (current().status === 'done' && !groups().length) {
+    <p class="note">No results for “{{ current().q }}”.</p>
+  } @else {
+    <div id="spot-list" role="listbox" aria-label="Search results">
+      @for (g of groups(); track g.type) {
+        <div role="group" [attr.aria-labelledby]="'spot-g-' + g.type">
+          <div class="group-label" role="presentation" [id]="'spot-g-' + g.type">{{ g.label }}</div>
+          @for (it of g.items; track it.id) {
+            @let id = optionId(g.type, it.id);
+            @if (safeRoute(it.route)) {
+              <div
+                class="row"
+                role="option"
+                [id]="id"
+                [class.active]="id === activeId()"
+                [attr.aria-selected]="id === activeId()"
+                (click)="chooseById(id)"
+              >
+                <span class="title">{{ it.title }}</span>
+                @if (it.subtitle) {
+                  <span class="subtitle">{{ it.subtitle }}</span>
+                }
+              </div>
+            } @else {
+              <div class="row disabled" role="option" [id]="id" aria-disabled="true" aria-selected="false">
+                <span class="title">{{ it.title }}</span>
+                <span class="subtitle">{{ it.subtitle ? it.subtitle + ' · ' : '' }}No detail page</span>
+              </div>
+            }
+          }
+        </div>
+      }
+    </div>
+  }
+</div>
