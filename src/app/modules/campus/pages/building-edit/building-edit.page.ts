@@ -17,7 +17,7 @@ import { UiService } from '@app/shared/services/ui.service';
 import { Building, BuildingChanges, LatLng } from '../../campus.models';
 import { BUILDINGS, CampusService } from '../../campus.service';
 import { BuildingShape, CampusMapViewComponent, GeometryDraft } from '../../components/campus-map-view/campus-map-view.component';
-import { MAX_TOLERANCE_M, MAX_VERTICES, parsePoints, perimeterError, pinError, round6, toleranceError } from '../../geometry';
+import { MAX_TOLERANCE_M, MAX_VERTICES, parsePoints, perimeterError, pinError, round6, toleranceError, wrapLng } from '../../geometry';
 
 export interface BuildingForm {
   code: string;
@@ -180,7 +180,7 @@ export class BuildingEditPage {
   }
 
   mapClick([lat, lng]: LatLng): void {
-    const p: LatLng = [round6(lat), round6(lng)];
+    const p: LatLng = [round6(lat), round6(wrapLng(lng))];
     if (this.clickMode() === 'pin') this.patch({ defaultLat: p[0], defaultLng: p[1] });
     else if (this.clickMode() === 'vertex' && this.form().perimeter.length < MAX_VERTICES) this.patch({ perimeter: [...this.form().perimeter, p] });
   }

@@ -68,6 +68,8 @@ export function parsePoints(text: string): LatLng[] | null {
 }
 
 export const round6 = (n: number) => Math.round(n * 1e6) / 1e6;
+/** Leaflet repeats the world sideways; a click on a copy gives e.g. 483.9 for 123.9. Bring it back to −180…180. */
+export const wrapLng = (lng: number) => ((((lng + 180) % 360) + 360) % 360) - 180;
 
 export const SOURCE_LABEL: Record<MarkerLocation['source'], string> = {
   GPS: 'Submitted GPS',
