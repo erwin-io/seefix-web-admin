@@ -1,5 +1,14 @@
 import { MapMarker, MarkerLocation } from './campus.models';
-import { NO_FILTER, SOURCE_LABEL, filterMarkers, parsePoints, perimeterError, pinError, pinned, provenance, rawGpsText, toleranceError } from './geometry';
+import { NO_FILTER, SOURCE_LABEL, filterMarkers, parsePoints, perimeterError, pinError, pinned, provenance, rawGpsText, toleranceError, wrapLng } from './geometry';
+
+describe('wrapLng', () => {
+  it('maps clicks on repeated world copies back to −180…180', () => {
+    expect(wrapLng(483.94968)).toBeCloseTo(123.94968, 6);
+    expect(wrapLng(-236.05)).toBeCloseTo(123.95, 6);
+    expect(wrapLng(123.9)).toBeCloseTo(123.9, 6);
+    expect(wrapLng(-179.5)).toBeCloseTo(-179.5, 6);
+  });
+});
 
 const square: [number, number][] = [
   [14.6, 121.0],
