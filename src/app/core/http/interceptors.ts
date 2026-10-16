@@ -13,8 +13,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   return next(req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }));
 };
 
-/** Own writes that cannot change a cached list. */
-const NO_LIST_EFFECT = /\/api\/(auth|notifications|uploads)\//;
+/** Own writes that cannot change a cached list (assistant writes touch only drafts, reminders and its job queue). */
+const NO_LIST_EFFECT = /\/api\/(auth|notifications|uploads|assistant)\//;
 
 /** After the user's own successful write, cached lists are revalidated (reloaded now if on screen, else on next view). */
 export const revalidateInterceptor: HttpInterceptorFn = (req, next) => {

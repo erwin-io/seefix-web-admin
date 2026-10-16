@@ -19,6 +19,7 @@ import { Notification } from '@app/core/notifications/notification.model';
 import { NotificationService } from '@app/core/notifications/notification.service';
 import { UiService } from '@app/shared/services/ui.service';
 import { entityLink } from '@app/shared/utils/entity-link';
+import { AssistantLauncherComponent } from '../assistant/assistant-launcher.component';
 
 interface NavItem {
   label: string;
@@ -42,7 +43,7 @@ const NAV: NavItem[] = [
   selector: 'app-shell',
   imports: [
     RouterOutlet, RouterLink, RouterLinkActive, DatePipe, MatSidenavModule, MatToolbarModule, MatListModule,
-    MatIconModule, MatButtonModule, MatBadgeModule, MatMenuModule, MatTooltipModule,
+    MatIconModule, MatButtonModule, MatBadgeModule, MatMenuModule, MatTooltipModule, AssistantLauncherComponent,
   ],
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.scss',

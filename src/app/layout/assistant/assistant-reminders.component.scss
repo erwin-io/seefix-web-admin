@@ -1,0 +1,72 @@
+:host {
+  display: block;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.reminders {
+  padding: 12px;
+  font-size: 14px;
+}
+
+h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+
+li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--sf-border);
+  .text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  small {
+    color: var(--sf-muted);
+  }
+}
+
+.muted {
+  color: var(--sf-muted);
+  font-size: 12px;
+}
+
+.problem {
+  color: var(--sf-danger);
+}
+
+.live {
+  color: var(--sf-ok);
+}
