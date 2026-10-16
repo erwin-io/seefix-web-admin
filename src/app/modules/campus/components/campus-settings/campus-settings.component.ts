@@ -180,8 +180,14 @@ export class CampusSettingsComponent {
     this.setCentre(e.point);
   }
 
-  useDefault(): void {
-    this.form.set({ ...CAMPUS_DEFAULT });
+  async useDefault(): Promise<void> {
+    const d = CAMPUS_DEFAULT;
+    const ok = await this.ui.confirm({
+      title: 'Use the default campus area?',
+      message: `The fields are reset to centre ${d.centerLat}, ${d.centerLng}, ${d.radiusMeters} m radius and minimum zoom ${d.minZoom}. Nothing is saved until you press Save campus area.`,
+      confirm: 'Use default',
+    });
+    if (ok) this.form.set({ ...CAMPUS_DEFAULT });
   }
 
   revert(): void {
@@ -191,6 +197,13 @@ export class CampusSettingsComponent {
 
   async save(): Promise<void> {
     if (!this.valid() || this.saving()) return;
+    const f = this.form();
+    const ok = await this.ui.confirm({
+      title: 'Save the campus map area?',
+      message: `Every campus map will open at ${f.centerLat}, ${f.centerLng}, stay within ${f.radiusMeters} m of it and not zoom out past ${f.minZoom}. Report corrections outside this area are refused.`,
+      confirm: 'Save campus area',
+    });
+    if (!ok || this.saving()) return;
     this.saving.set(true);
     this.saveError.set(null);
     try {

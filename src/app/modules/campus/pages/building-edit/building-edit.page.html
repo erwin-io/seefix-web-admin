@@ -204,7 +204,7 @@
             }
             Map clicks add nothing meanwhile.
           </span>
-          <button mat-stroked-button type="button" (click)="moving.set(null)">Done</button>
+          <button mat-stroked-button type="button" (click)="stopMove()">Done</button>
         </div>
       } @else if (clickMode() === null) {
         <p class="muted hint">Pan only: clicks don't change anything. Use <mat-icon inline>open_with</mat-icon> next to a point to drag it, or pick
