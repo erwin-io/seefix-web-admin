@@ -18,6 +18,14 @@ import {
 
 const BASE = '/api/assistant';
 
+/**
+ * POST /api/assistant/ask waits up to 35 s for the Agent (seefix-api agent-client `assistantRespond`), which itself
+ * allows 30 s for the model plus a short queue wait; a cold model start takes ~15 s on the laptop alone. The default
+ * 20 s request timeout cut such answers off ("The server took too long"). 45 s: above the API's wait, below Vercel's
+ * 60 s function limit, so the API's own fallback answer always arrives first.
+ */
+export const ASK_TIMEOUT_MS = 45_000;
+
 /** Typed calls to `/api/assistant/*`. The web never talks to the Agent; the API picks the facts. */
 @Injectable({ providedIn: 'root' })
 export class AssistantApi {
@@ -29,7 +37,7 @@ export class AssistantApi {
 
   ask(question: string, context: RecordContext | null): Promise<AskResponse> {
     return firstValueFrom(
-      this.api.post<AskResponse>(`${BASE}/ask`, context ? { question, context } : { question }),
+      this.api.post<AskResponse>(`${BASE}/ask`, context ? { question, context } : { question }, { timeoutMs: ASK_TIMEOUT_MS }),
     );
   }
 
