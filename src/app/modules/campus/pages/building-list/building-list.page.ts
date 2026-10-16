@@ -10,11 +10,12 @@ import { DataTableComponent } from '@app/shared/components/data-table/data-table
 import { SHARED_IMPORTS } from '@app/shared/shared.imports';
 import { Building } from '../../campus.models';
 import { BUILDINGS } from '../../campus.service';
+import { CampusSettingsComponent } from '../../components/campus-settings/campus-settings.component';
 
 /** Admin building settings: the server's order (sort order, then name); filtering and sorting are local. */
 @Component({
   selector: 'app-building-list-page',
-  imports: [DatePipe, RouterLink, MatButtonModule, MatIconModule, MatSortModule, MatTableModule, DataTableComponent, ...SHARED_IMPORTS],
+  imports: [DatePipe, RouterLink, MatButtonModule, MatIconModule, MatSortModule, MatTableModule, DataTableComponent, CampusSettingsComponent, ...SHARED_IMPORTS],
   template: `
     <div class="page-head">
       <div>
@@ -27,6 +28,8 @@ import { BUILDINGS } from '../../campus.service';
         <a mat-flat-button routerLink="new"><mat-icon>add_business</mat-icon>Add building</a>
       </div>
     </div>
+    <app-campus-settings />
+    <h2 class="table-title">Buildings</h2>
     <app-data-table
       [dataset]="data"
       [columns]="columns"
@@ -66,7 +69,7 @@ import { BUILDINGS } from '../../campus.service';
       </ng-container>
     </app-data-table>
   `,
-  styles: `.sub { display: block; color: var(--sf-muted); font-size: 12px; }`,
+  styles: `.sub { display: block; color: var(--sf-muted); font-size: 12px; } .table-title { font-size: 15px; font-weight: 600; margin: 0 0 8px; }`,
 })
 export class BuildingListPage {
   private readonly router = inject(Router);

@@ -1,5 +1,5 @@
 import { MapMarker, MarkerLocation } from './campus.models';
-import { NO_FILTER, SOURCE_LABEL, filterMarkers, parsePoints, perimeterError, pinError, pinned, provenance, rawGpsText, toleranceError, wrapLng } from './geometry';
+import { NO_FILTER, SOURCE_LABEL, filterMarkers, parsePoints, perimeterError, pinError, pinned, provenance, rawGpsText, toleranceError, wrapLng, campusBounds, outsideCampus, metresBetween } from './geometry';
 
 describe('wrapLng', () => {
   it('maps clicks on repeated world copies back to −180…180', () => {
@@ -61,7 +61,7 @@ describe('provenance labels (from the API gpsCheck; nothing recomputed)', () => 
   const loc = (l: Partial<MarkerLocation>): MarkerLocation => ({ source: 'GPS', lat: 14.6, lng: 121, rawGps: { lat: 14.6, lng: 121 }, gpsCheck: 'INSIDE', ...l });
 
   it('labels each source and explains why', () => {
-    expect(SOURCE_LABEL).toEqual({ GPS: 'Submitted GPS', BUILDING_DEFAULT: 'Building default pin', NONE: 'Not pinned' });
+    expect(SOURCE_LABEL).toEqual({ CORRECTED: 'Set by maintenance', GPS: 'Submitted GPS', BUILDING_DEFAULT: 'Building location', NONE: 'Not pinned' });
     expect(provenance(loc({}))).toBe('GPS is inside the building perimeter');
     expect(provenance(loc({ gpsCheck: 'WITHIN_TOLERANCE' }))).toMatch(/within its tolerance/);
     expect(provenance(loc({ gpsCheck: 'NO_PERIMETER' }))).toMatch(/no perimeter/);
@@ -69,9 +69,9 @@ describe('provenance labels (from the API gpsCheck; nothing recomputed)', () => 
     expect(provenance(loc({ source: 'BUILDING_DEFAULT', gpsCheck: 'OUTSIDE', gpsDistanceMeters: 1234.5 }))).toBe(
       "GPS is 1234.5 m outside the building perimeter; shown at the building's default pin",
     );
-    expect(provenance(loc({ source: 'NONE', lat: null, lng: null, gpsCheck: 'OUTSIDE', gpsDistanceMeters: 80 }))).toMatch(/80 m outside .* no default pin/);
+    expect(provenance(loc({ source: 'NONE', lat: null, lng: null, gpsCheck: 'OUTSIDE', gpsDistanceMeters: 80 }))).toMatch(/80 m outside .* the building has no location/);
     expect(provenance(loc({ source: 'BUILDING_DEFAULT', rawGps: null, gpsCheck: 'NO_GPS' }))).toMatch(/No GPS submitted; shown at the building's default pin/);
-    expect(provenance(loc({ source: 'NONE', lat: null, lng: null, rawGps: null, gpsCheck: 'NO_GPS' }))).toBe('No GPS submitted and no default pin');
+    expect(provenance(loc({ source: 'NONE', lat: null, lng: null, rawGps: null, gpsCheck: 'NO_GPS' }))).toBe('No GPS submitted and no building location to show it at');
   });
 
   it('shows raw GPS untouched even when the pin is the building default, and handles missing GPS', () => {
@@ -97,5 +97,22 @@ describe('provenance labels (from the API gpsCheck; nothing recomputed)', () => 
     expect(filterMarkers(ms, { ...NO_FILTER, kind: 'WORK_ORDER' }).map((m) => m.no)).toEqual(['W1']);
     expect(filterMarkers(ms, { ...NO_FILTER, category: 'PLUMBING', urgency: 'High' }).map((m) => m.no)).toEqual(['R1']);
     expect(filterMarkers(ms, { ...NO_FILTER, buildingId: 'b2', status: 'PENDING_REVIEW' })).toEqual([]);
+  });
+});
+
+describe('campus area', () => {
+  const campus = { centerLat: 10.326321, centerLng: 123.954995, radiusMeters: 600, minZoom: 16 };
+  it('bounds the map to a square around the circle', () => {
+    const [sw, ne] = campusBounds(campus);
+    expect(metresBetween([sw[0], campus.centerLng], [ne[0], campus.centerLng])).toBeCloseTo(1200, -1);
+    expect(metresBetween([campus.centerLat, sw[1]], [campus.centerLat, ne[1]])).toBeCloseTo(1200, -1);
+  });
+  it('says whether a point is outside the circle (same rule as the API)', () => {
+    expect(outsideCampus(campus, [10.3262, 123.955])).toBe(false);
+    expect(outsideCampus(campus, [10.4, 123.95])).toBe(true);
+  });
+  it('explains a maintenance-set location', () => {
+    expect(provenance({ source: 'CORRECTED', lat: 1, lng: 2, rawGps: null, gpsCheck: 'NO_GPS', correction: { source: 'MANUAL', reason: 'From photo', updatedAt: null, updatedBy: 'Staff' } }))
+      .toBe('Shown at a point picked by maintenance (Staff): From photo. Raw GPS is unchanged');
   });
 });

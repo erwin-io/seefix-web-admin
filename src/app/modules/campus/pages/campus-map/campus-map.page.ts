@@ -1,4 +1,4 @@
-import { DatePipe, LowerCasePipe } from '@angular/common';
+import { DOCUMENT, DatePipe, LowerCasePipe } from '@angular/common';
 import { Component, DestroyRef, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -20,6 +20,8 @@ import { CampusMapViewComponent, KIND_COLOR, markerKey } from '../../components/
 import { MarkerFilter, NO_FILTER, SOURCE_LABEL, filterMarkers, options, pinned, provenance, rawGpsText } from '../../geometry';
 
 export const KIND_LABEL: Record<MapMarker['kind'], string> = { REPORT: 'Report', WORK_ORDER: 'Work order' };
+/** While the map is on screen it asks for changes this often (cheap version check; data reloads only on change). */
+export const MAP_LIVE_MS = 15_000;
 const MATCH_LABEL: Record<MapMarker['buildingMatch'], string> = {
   LOCATION: 'From the facility location',
   NAME: 'Matched by building name',
@@ -47,6 +49,9 @@ export class CampusMapPage {
   readonly view = viewChild(CampusMapViewComponent);
   readonly data = this.campus.map();
   readonly buildings = this.campus.mapBuildings;
+  readonly area = this.campus.campus;
+  /** The picked building has no outline or pin yet, so the map can't centre on it. */
+  readonly noLocation = signal<string | null>(null);
   readonly kindLabel = KIND_LABEL;
   readonly kindColor = KIND_COLOR;
   readonly sourceLabel = SOURCE_LABEL;
@@ -79,9 +84,14 @@ export class CampusMapPage {
   readonly searchText = (m: MapMarker) => [m.no, m.status, m.category, m.urgency, m.buildingName, SOURCE_LABEL[m.location.source]].join(' ');
 
   constructor() {
-    this.data.attach(inject(DestroyRef));
+    const destroyRef = inject(DestroyRef);
+    this.data.attach(destroyRef);
     void this.data.ensure();
     inject(DatasetStore).onActivity();
+    // Live: check for changes every MAP_LIVE_MS while this page is visible (Pusher hints still arrive sooner).
+    const doc = inject(DOCUMENT);
+    const timer = setInterval(() => doc.visibilityState === 'visible' && this.sync.poll(), MAP_LIVE_MS);
+    destroyRef.onDestroy(() => clearInterval(timer));
   }
 
   // Table cells are untyped (`let m`), so they go through these.
@@ -97,9 +107,14 @@ export class CampusMapPage {
     this.filter.set(NO_FILTER);
   }
 
-  /** Building drill-down: filter to it and zoom the map to it. */
+  /** Building drill-down (map outline, list or filter): filter to it and centre the map on it, every time. */
   openBuilding(id: string | null): void {
     this.setFilter('buildingId', id);
+    this.selectedKey.set(null);
+    const b = id ? this.buildings().find((x) => x.id === id) : null;
+    // The input change centres on a new building; this also re-centres when the same one is picked again.
+    const centred = id ? (this.view()?.focus(id) ?? true) : true;
+    this.noLocation.set(b && !centred ? b.name : null);
   }
 
   select(m: MapMarker | null): void {

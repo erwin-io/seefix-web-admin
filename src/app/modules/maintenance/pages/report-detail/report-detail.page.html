@@ -21,6 +21,10 @@
         <app-evidence-gallery [urls]="photos()" />
       </section>
 
+      @if (showsMap()) {
+        <app-report-location [reportId]="id()" />
+      }
+
       <section class="card">
         <h2>AI assessment</h2>
         <div class="advisory">

@@ -101,6 +101,11 @@
           <mat-label>Default pin longitude</mat-label>
           <input matInput type="number" step="any" name="defaultLng" [ngModel]="form().defaultLng" (ngModelChange)="patch({ defaultLng: $event })" />
         </mat-form-field>
+        @if (form().defaultLat !== null && form().defaultLng !== null) {
+          <button mat-button type="button" data-action="move-pin" [class.active]="moving() === 'pin'" [attr.aria-pressed]="moving() === 'pin'" (click)="toggleMove('pin')">
+            <mat-icon>open_with</mat-icon>{{ moving() === 'pin' ? 'Done moving' : 'Move pin' }}
+          </button>
+        }
         @if (form().defaultLat !== null || form().defaultLng !== null) {
           <button mat-button type="button" (click)="clearPin()">Remove pin</button>
         }
@@ -123,13 +128,23 @@
       }
       @if (form().perimeter.length) {
         <table class="vertices">
-          <thead><tr><th scope="col">#</th><th scope="col">Latitude</th><th scope="col">Longitude</th><th><span class="sr-only">Remove</span></th></tr></thead>
+          <thead>
+            <tr>
+              <th scope="col">#</th><th scope="col">Latitude</th><th scope="col">Longitude</th>
+              <th scope="col"><span class="sr-only">Move on map</span></th><th><span class="sr-only">Remove</span></th>
+            </tr>
+          </thead>
           <tbody>
             @for (p of form().perimeter; track $index; let i = $index) {
-              <tr>
+              <tr [class.moving]="moving() === i">
                 <td>{{ i + 1 }}</td>
                 <td><input type="number" step="any" [attr.aria-label]="'Point ' + (i + 1) + ' latitude'" [value]="p[0]" (change)="setVertex(i, 0, $any($event.target).valueAsNumber)" /></td>
                 <td><input type="number" step="any" [attr.aria-label]="'Point ' + (i + 1) + ' longitude'" [value]="p[1]" (change)="setVertex(i, 1, $any($event.target).valueAsNumber)" /></td>
+                <td>
+                  <button mat-icon-button type="button" data-action="move-point" [class.active]="moving() === i" [attr.aria-pressed]="moving() === i"
+                    [attr.aria-label]="(moving() === i ? 'Stop moving point ' : 'Move point ') + (i + 1) + ' on the map'" [matTooltip]="moving() === i ? 'Done moving' : 'Drag this point on the map'"
+                    (click)="toggleMove(i)"><mat-icon>{{ moving() === i ? 'check' : 'open_with' }}</mat-icon></button>
+                </td>
                 <td><button mat-icon-button type="button" [attr.aria-label]="'Remove point ' + (i + 1)" (click)="removeVertex(i)"><mat-icon>close</mat-icon></button></td>
               </tr>
             }
@@ -172,17 +187,37 @@
     <section class="card map">
       <header>
         <h2>Draw on the map</h2>
-        <mat-button-toggle-group [value]="clickMode()" (change)="clickMode.set($event.value)" aria-label="Map click adds" hideSingleSelectionIndicator>
+        <mat-button-toggle-group [value]="clickMode()" (change)="clickMode.set($event.value)" aria-label="Map click" hideSingleSelectionIndicator [disabled]="moving() !== null">
+          <mat-button-toggle [value]="null">Pan only</mat-button-toggle>
           <mat-button-toggle value="vertex">Add perimeter point</mat-button-toggle>
           <mat-button-toggle value="pin">Set default pin</mat-button-toggle>
         </mat-button-toggle-group>
       </header>
+      @if (moving() !== null) {
+        <div class="banner moving" role="status" data-banner="moving">
+          <mat-icon>open_with</mat-icon>
+          <span class="grow">
+            @if (moving() === 'pin') {
+              Moving the <strong>default pin</strong>: drag it on the map. Its latitude and longitude update as you drag.
+            } @else {
+              Moving <strong>point {{ $any(moving()) + 1 }}</strong>: drag the numbered handle on the map. Its latitude and longitude update as you drag.
+            }
+            Map clicks add nothing meanwhile.
+          </span>
+          <button mat-stroked-button type="button" (click)="moving.set(null)">Done</button>
+        </div>
+      } @else if (clickMode() === null) {
+        <p class="muted hint">Pan only: clicks don't change anything. Use <mat-icon inline>open_with</mat-icon> next to a point to drag it, or pick
+          "Add perimeter point" / "Set default pin".</p>
+      }
       <app-campus-map-view
         #mapView
         [buildings]="others()"
         [draft]="draft()"
+        [campus]="campusArea()"
         (mapClick)="mapClick($event)"
-        label="Building location editor. Click to add perimeter points or set the default pin; the fields on the left are the keyboard alternative."
+        (draftMove)="draftMoved($event)"
+        label="Building location editor. Click to add perimeter points or set the default pin, or drag the point being moved; the fields on the left are the keyboard alternative."
       />
       @if (mapView.failed()) {
         <p class="muted" role="status">The map couldn't load. Enter the coordinates in the fields instead.</p>

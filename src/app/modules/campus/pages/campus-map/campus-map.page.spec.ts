@@ -6,7 +6,8 @@ import { SessionService } from '@app/core/auth/session.service';
 import { MapMarker, MapResponse } from '../../campus.models';
 import { LEAFLET } from '../../campus.service';
 import { FakeLeaflet } from '../../testing/fake-leaflet';
-import { CampusMapPage } from './campus-map.page';
+import { CacheSyncService } from '@app/core/data/cache-sync.service';
+import { CampusMapPage, MAP_LIVE_MS } from './campus-map.page';
 
 const OLD = {
   id: 'b1', code: 'OLD', name: 'Old Building', defaultLat: 14.6, defaultLng: 121.0, toleranceMeters: 25, geometryRevision: 2,
@@ -67,8 +68,8 @@ describe('CampusMapPage', () => {
     expect(cells('ref')).toEqual(['RPT-1Report', 'RPT-2Report', 'RPT-3Report', 'WO-1Work order']);
     const location = cells('location');
     expect(location[0]).toBe('Submitted GPSGPS is inside the building perimeter');
-    expect(location[1]).toBe("Building default pinGPS is 1234.5 m outside the building perimeter; shown at the building's default pin");
-    expect(location[2]).toBe('Not pinnedNo GPS submitted and no default pin');
+    expect(location[1]).toBe("Building locationGPS is 1234.5 m outside the building perimeter; shown at the building's default pin");
+    expect(location[2]).toBe('Not pinnedNo GPS submitted and no building location to show it at');
     expect(cells('gps')).toEqual(['14.6004, 121.0004', '14.7123456, 121.1', 'No GPS submitted', '14.6004, 121.0004']);
     expect(cells('building')[2]).toBe('New BuildingMatched by building name');
     expect(el.querySelector('[data-banner="unpinned"]')?.textContent).toContain('1 shown item has no map position');
@@ -77,7 +78,7 @@ describe('CampusMapPage', () => {
   it('pins only positioned markers, solid for GPS and hollow for building default, and draws building outlines', async () => {
     const { fake } = await setup();
     const pins = fake.circles.filter((c) => c.tooltip?.includes('·'));
-    expect(pins.map((c) => c.tooltip)).toEqual(['RPT-1 · Submitted GPS', 'RPT-2 · Building default pin', 'WO-1 · Submitted GPS']);
+    expect(pins.map((c) => c.tooltip)).toEqual(['RPT-1 · Submitted GPS', 'RPT-2 · Building location', 'WO-1 · Submitted GPS']);
     expect((pins[0].opts as { fillColor: string }).fillColor).toBe('#2563eb');
     expect((pins[1].opts as { dashArray?: string }).dashArray).toBeDefined();
     expect((pins[2].opts as { fillColor: string }).fillColor).toBe('#d9480f');
@@ -89,7 +90,7 @@ describe('CampusMapPage', () => {
     fake.circles.find((c) => c.tooltip?.startsWith('RPT-2'))!.fire('click');
     await fixture.whenStable();
     const details = el.querySelector('[data-panel="marker"]')!;
-    expect(details.querySelector('[data-field="source"]')?.textContent).toBe('Building default pin');
+    expect(details.querySelector('[data-field="source"]')?.textContent).toBe('Building location');
     expect(details.querySelector('[data-field="raw-gps"]')?.textContent).toBe('14.7123456, 121.1');
 
     page.select(null);
@@ -104,6 +105,60 @@ describe('CampusMapPage', () => {
     await fixture.whenStable();
     expect(cells('ref')).toEqual(['RPT-2Report']);
     http.verify(); // filters and drill-down are local; the map never reclassifies anything
+  });
+
+  it('keeps the map inside the campus area and centres on a picked building, every time', async () => {
+    const campus = { centerLat: 14.6005, centerLng: 121.0005, radiusMeters: 600, minZoom: 16 };
+    const { fake, page, fixture, el } = await setup({ ...MAP, campus });
+    expect(fake.map!.minZoom).toBe(16);
+    const [sw, ne] = (fake.map!.maxBounds as { pts: [number, number][] }).pts;
+    expect(ne[0] - sw[0]).toBeCloseTo((2 * 600) / 111_195, 4); // 1.2 km north–south
+    expect(sw[1]).toBeLessThan(121.0005);
+    expect(ne[1]).toBeGreaterThan(121.0005);
+
+    page.openBuilding('b1');
+    await fixture.whenStable();
+    expect((fake.map!.fitted as { pts: unknown }).pts).toEqual(OLD.perimeter);
+    fake.map!.fitted = undefined;
+    page.openBuilding('b1'); // same building again: still re-centres
+    expect((fake.map!.fitted as { pts: unknown }).pts).toEqual(OLD.perimeter);
+
+    page.openBuilding('b2'); // no outline, no pin
+    await fixture.whenStable();
+    expect(el.querySelector('[data-banner="no-location"]')?.textContent).toContain("New Building has no outline or pin yet");
+    page.openBuilding(null);
+    await fixture.whenStable();
+    expect(el.querySelector('[data-banner="no-location"]')).toBeNull();
+  });
+
+  it('a building click on the map selects it without also counting as a map click', async () => {
+    const { fake, page, fixture } = await setup();
+    const outline = fake.polygons.find((p) => p.tooltip === 'Old Building')!;
+    outline.fire('click', {});
+    await fixture.whenStable();
+    expect(page.filter().buildingId).toBe('b1');
+  });
+
+  it('asks for changes every 15 s while the page is open, and stops when it closes', async () => {
+    vi.useFakeTimers();
+    try {
+      const fake = new FakeLeaflet();
+      TestBed.configureTestingModule({
+        imports: [CampusMapPage],
+        providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: LEAFLET, useValue: async () => fake.module() }],
+      });
+      const poll = vi.spyOn(TestBed.inject(CacheSyncService), 'poll');
+      const fixture = TestBed.createComponent(CampusMapPage);
+      expect(MAP_LIVE_MS).toBe(15_000);
+      const entry = poll.mock.calls.length; // the module-entry check
+      vi.advanceTimersByTime(MAP_LIVE_MS * 2);
+      expect(poll).toHaveBeenCalledTimes(entry + 2);
+      fixture.destroy();
+      vi.advanceTimersByTime(MAP_LIVE_MS * 2);
+      expect(poll).toHaveBeenCalledTimes(entry + 2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('warns when map tiles fail and still lists everything', async () => {
